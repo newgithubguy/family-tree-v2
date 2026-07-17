@@ -106,7 +106,7 @@ export function TreeCanvas({
   const [showSiblingConnections, setShowSiblingConnections] = useState(true);
   const [showHalfSiblingConnections, setShowHalfSiblingConnections] = useState(true);
   const [connectionStyle, setConnectionStyle] = useState<ConnectionStyle>("curved");
-  const [relationshipDetailsCollapsed, setRelationshipDetailsCollapsed] = useState(false);
+  const [relationshipDetailsCollapsed, setRelationshipDetailsCollapsed] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [moveAllMode, setMoveAllMode] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -688,8 +688,8 @@ export function TreeCanvas({
         </div>
 
           {!relationshipDetailsCollapsed && (
-            <aside className="pointer-events-none absolute bottom-4 right-4 top-4 z-20 w-[340px] max-w-[calc(100%-2rem)]">
-              <div className="pointer-events-auto flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur">
+            <aside className="pointer-events-none absolute right-4 top-4 z-20 w-[320px] max-w-[calc(100%-2rem)]">
+              <div className="pointer-events-auto flex max-h-[70vh] min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-slate-800">Relationship Details</h3>
                   <button
