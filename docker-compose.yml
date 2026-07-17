@@ -13,5 +13,8 @@ services:
       - PORT=3000
       - WS_PORT=3001
     volumes:
-      - ./data:/app/data
+      - family-tree-v2-data:/app/data
     restart: unless-stopped
+
+volumes:
+  family-tree-v2-data:

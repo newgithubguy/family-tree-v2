@@ -42,7 +42,7 @@ App endpoints:
 - `http://localhost:3000` (web app)
 - `ws://localhost:3001/ws` (realtime socket)
 
-The mock relational data persists to `./data` via bind mount.
+The mock relational data persists in the Docker named volume `family-tree-v2-data`.
 
 ## Data Model
 
