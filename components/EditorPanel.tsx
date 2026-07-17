@@ -397,6 +397,32 @@ export function EditorPanel({
     await onRefresh();
   }
 
+  async function removeChildLinkById(linkId: string) {
+    if (!canEdit || !linkId) {
+      return;
+    }
+
+    const response = await fetch(`/api/tree/children-links/${linkId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ treeId })
+    });
+
+    if (!response.ok) {
+      setChildLinkMessage("Failed to remove parent link.");
+      return;
+    }
+
+    if (selectedChildLinkId === linkId) {
+      setSelectedChildLinkId("");
+      setConnectionUnionId("");
+      setSingleParentId("");
+    }
+
+    setChildLinkMessage("Parent link removed.");
+    await onRefresh();
+  }
+
   return (
     <div className={`panel h-full overflow-auto p-4 ${collapsed ? "min-h-0" : "min-h-[520px]"}`}>
       <div className={`flex items-center justify-between gap-2 ${collapsed ? "mb-0" : "mb-4"}`}>
@@ -554,6 +580,40 @@ export function EditorPanel({
             <section className="space-y-2 rounded-xl border border-slate-200 p-3">
               <h3 className="text-sm font-semibold text-slate-800">Edit Parent Link</h3>
               <p className="text-xs text-slate-500">Use a parent union or choose a single parent for this person.</p>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Current parent links</p>
+                {childLinksForPerson.length === 0 ? (
+                  <p className="text-xs text-slate-500">No parent links yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {childLinksForPerson.map((link) => (
+                      <div
+                        key={link.id}
+                        className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-2 py-2"
+                      >
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 truncate text-left text-xs text-slate-700"
+                          onClick={() => setSelectedChildLinkId(link.id)}
+                          title={childLinkDisplayName(link)}
+                        >
+                          {childLinkDisplayName(link)}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!canEdit}
+                          className="rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 disabled:opacity-50"
+                          onClick={() => void removeChildLinkById(link.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <select
                 className="w-full rounded-md border px-3 py-2 text-sm"
                 value={selectedChildLinkId}
