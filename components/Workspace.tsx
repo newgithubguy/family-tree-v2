@@ -226,7 +226,7 @@ export function Workspace() {
   }
 
   return (
-    <main className="mx-auto max-w-[1900px] p-4 md:p-6">
+    <main className="flex h-screen w-full flex-col p-3 md:p-4">
       <header className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-panel md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{state.tree.name}</h1>
@@ -277,9 +277,9 @@ export function Workspace() {
       <section
         className={`grid gap-4 ${
           allLeftPanelsCollapsed ? "grid-cols-1" : "lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)]"
-        }`}
+        } flex-1 min-h-0`}
       >
-        {!allLeftPanelsCollapsed && <div className="order-2 space-y-4 lg:order-1">
+        {!allLeftPanelsCollapsed && <div className="order-2 min-h-0 space-y-4 lg:order-1 lg:overflow-auto">
           {!editorCollapsed && (
             <EditorPanel
               treeId={treeId}
@@ -317,7 +317,7 @@ export function Workspace() {
           )}
         </div>}
 
-        <div className={allLeftPanelsCollapsed ? "order-1" : "order-1 lg:order-2"}>
+        <div className={allLeftPanelsCollapsed ? "order-1 min-h-0" : "order-1 min-h-0 lg:order-2"}>
           <TreeCanvas
             people={state.people}
             unions={state.unions}

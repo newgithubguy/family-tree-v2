@@ -39,7 +39,7 @@ type SiblingPair = {
 };
 
 const BOARD_WIDTH = 900;
-const BOARD_HEIGHT = 380;
+const BASE_BOARD_HEIGHT = 380;
 const NODE_WIDTH = 120;
 const NODE_HEIGHT = 44;
 const MIN_ZOOM = 0.6;
@@ -111,10 +111,12 @@ export function TreeCanvas({
   const [moveAllMode, setMoveAllMode] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [viewportWidth, setViewportWidth] = useState(BOARD_WIDTH);
+  const [viewportHeight, setViewportHeight] = useState(BASE_BOARD_HEIGHT);
 
   const fitScale = viewportWidth / BOARD_WIDTH;
   const boardScale = fitScale * zoomLevel;
-  const scaledBoardHeight = BOARD_HEIGHT * boardScale;
+  const boardHeight = Math.max(BASE_BOARD_HEIGHT, viewportHeight / Math.max(boardScale, 0.001));
+  const scaledBoardHeight = boardHeight * boardScale;
 
   const centers = useMemo(() => {
     const next: Record<string, { x: number; y: number }> = {};
@@ -135,6 +137,7 @@ export function TreeCanvas({
 
     const updateViewportWidth = () => {
       setViewportWidth(viewport.clientWidth || BOARD_WIDTH);
+      setViewportHeight(viewport.clientHeight || BASE_BOARD_HEIGHT);
     };
 
     updateViewportWidth();
@@ -165,7 +168,7 @@ export function TreeCanvas({
 
       if (currentDrag.mode === "person") {
         const x = clamp(logicalX - currentDrag.offsetX, 8, BOARD_WIDTH - 120);
-        const y = clamp(logicalY - currentDrag.offsetY, 8, BOARD_HEIGHT - 52);
+        const y = clamp(logicalY - currentDrag.offsetY, 8, boardHeight - 52);
 
         setDragPositions((current) => ({
           ...current,
@@ -180,7 +183,7 @@ export function TreeCanvas({
       Object.entries(currentDrag.startPositions).forEach(([personId, start]) => {
         next[personId] = {
           x: clamp(start.x + deltaX, 8, BOARD_WIDTH - 120),
-          y: clamp(start.y + deltaY, 8, BOARD_HEIGHT - 52)
+          y: clamp(start.y + deltaY, 8, boardHeight - 52)
         };
       });
       setDragPositions(next);
@@ -222,7 +225,7 @@ export function TreeCanvas({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [boardScale, dragState, onPositionCommit, people, positions]);
+  }, [boardHeight, boardScale, dragState, onPositionCommit, people, positions]);
 
   const siblingPairs = useMemo(() => {
     const unionById = new Map(unions.map((union) => [union.id, union]));
@@ -470,7 +473,7 @@ export function TreeCanvas({
   ]);
 
   return (
-    <div className="panel canvas-grid flex h-[calc(100vh-180px)] min-h-[620px] flex-col overflow-hidden p-6">
+    <div className="panel canvas-grid flex h-full min-h-0 flex-col overflow-hidden p-6">
       <h2 className="mb-4 text-lg font-semibold text-slate-800">Family Canvas</h2>
 
       <div
@@ -626,9 +629,9 @@ export function TreeCanvas({
           >
             <div
               className="absolute left-0 top-0 origin-top-left"
-              style={{ width: BOARD_WIDTH, height: BOARD_HEIGHT, transform: `scale(${boardScale})` }}
+              style={{ width: BOARD_WIDTH, height: boardHeight, transform: `scale(${boardScale})` }}
             >
-              <svg className="pointer-events-none absolute inset-0 z-0" width={BOARD_WIDTH} height={BOARD_HEIGHT}>
+              <svg className="pointer-events-none absolute inset-0 z-0" width={BOARD_WIDTH} height={boardHeight}>
                 {connectors}
               </svg>
               {people.map((person) => {
