@@ -106,6 +106,7 @@ export function TreeCanvas({
   const [showSiblingConnections, setShowSiblingConnections] = useState(true);
   const [showHalfSiblingConnections, setShowHalfSiblingConnections] = useState(true);
   const [connectionStyle, setConnectionStyle] = useState<ConnectionStyle>("curved");
+  const [relationshipDetailsCollapsed, setRelationshipDetailsCollapsed] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [moveAllMode, setMoveAllMode] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -469,11 +470,15 @@ export function TreeCanvas({
   ]);
 
   return (
-    <div className="panel h-full min-h-[620px] overflow-auto p-6 canvas-grid">
+    <div className="panel canvas-grid flex h-[calc(100vh-180px)] min-h-[620px] flex-col overflow-hidden p-6">
       <h2 className="mb-4 text-lg font-semibold text-slate-800">Family Canvas</h2>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div
+        className={`grid min-h-0 flex-1 gap-4 ${
+          relationshipDetailsCollapsed ? "grid-cols-1" : "xl:grid-cols-[minmax(0,1fr)_360px]"
+        }`}
+      >
+        <div className="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="mb-2 flex flex-wrap items-center gap-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Draggable People Board</div>
             <div className="flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700">
@@ -551,6 +556,13 @@ export function TreeCanvas({
               <option value="curved">Curved lines</option>
               <option value="straight">Straight lines</option>
             </select>
+            <button
+              type="button"
+              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700"
+              onClick={() => setRelationshipDetailsCollapsed((current) => !current)}
+            >
+              {relationshipDetailsCollapsed ? "Show Relationship Details" : "Hide Relationship Details"}
+            </button>
           </div>
           <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-slate-600">
             <span className="inline-flex items-center gap-2">
@@ -588,8 +600,8 @@ export function TreeCanvas({
           </div>
           <div
             ref={viewportRef}
-            className="relative w-full overflow-auto rounded-lg border border-slate-300 bg-white"
-            style={{ height: scaledBoardHeight }}
+            className="relative min-h-0 w-full flex-1 overflow-auto rounded-lg border border-slate-300 bg-white"
+            style={{ minHeight: scaledBoardHeight }}
             onPointerDown={(event) => {
               if (!canEdit || !moveAllMode || !viewportRef.current) {
                 return;
@@ -674,7 +686,7 @@ export function TreeCanvas({
           </div>
         </div>
 
-        <aside className="rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+        {!relationshipDetailsCollapsed && <aside className="min-h-0 overflow-auto rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm">
           <h3 className="mb-3 text-sm font-semibold text-slate-800">Relationship Details</h3>
           <div className="space-y-4">
             {unions.map((union) => {
@@ -719,7 +731,7 @@ export function TreeCanvas({
               );
             })}
           </div>
-        </aside>
+        </aside>}
       </div>
     </div>
   );
