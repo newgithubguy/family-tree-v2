@@ -476,12 +476,8 @@ export function TreeCanvas({
     <div className="panel canvas-grid flex h-full min-h-0 flex-col overflow-hidden p-6">
       <h2 className="mb-4 text-lg font-semibold text-slate-800">Family Canvas</h2>
 
-      <div
-        className={`grid min-h-0 flex-1 gap-4 ${
-          relationshipDetailsCollapsed ? "grid-cols-1" : "xl:grid-cols-[minmax(0,1fr)_360px]"
-        }`}
-      >
-        <div className="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div className="min-h-0 flex-1">
+        <div className="relative flex h-full min-h-0 flex-col rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="mb-2 flex flex-wrap items-center gap-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Draggable People Board</div>
             <div className="flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700">
@@ -691,61 +687,65 @@ export function TreeCanvas({
           </div>
         </div>
 
-        {!relationshipDetailsCollapsed && <aside className="min-h-0 overflow-auto rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-slate-800">Relationship Details</h3>
-            <button
-              type="button"
-              className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
-              onClick={() => setRelationshipDetailsCollapsed(true)}
-            >
-              Collapse
-            </button>
-          </div>
-          <div className="space-y-4">
-            {unions.map((union) => {
-              const a = peopleMap.get(union.partner_a_person_id);
-              const b = union.partner_b_person_id ? peopleMap.get(union.partner_b_person_id) : null;
-              const kids = childrenLinks
-                .filter((link) => link.union_id === union.id)
-                .map((link) => peopleMap.get(link.child_person_id))
-                .filter(Boolean) as Person[];
-
-              return (
-                <div key={union.id} className="rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className="rounded-full bg-teal-100 px-3 py-1 font-medium text-teal-800">
-                      {a ? `${a.first_name} ${a.last_name}` : "Unknown Partner"}
-                    </span>
-                    <span className="text-slate-500">{union.union_type.toUpperCase()}</span>
-                    {b ? (
-                      <span className="rounded-full bg-cyan-100 px-3 py-1 font-medium text-cyan-800">
-                        {`${b.first_name} ${b.last_name}`}
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">Single Parent</span>
-                    )}
-                  </div>
-
-                  <div className="mt-3">
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Children tied to this union</div>
-                    {kids.length === 0 ? (
-                      <p className="text-sm text-slate-500">No children linked to this union yet.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {kids.map((kid) => (
-                          <span key={kid.id} className="rounded-full bg-indigo-100 px-3 py-1 text-sm font-medium text-indigo-800">
-                            {kid.first_name} {kid.last_name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+          {!relationshipDetailsCollapsed && (
+            <aside className="pointer-events-none absolute bottom-4 right-4 top-4 z-20 w-[340px] max-w-[calc(100%-2rem)]">
+              <div className="pointer-events-auto flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-slate-800">Relationship Details</h3>
+                  <button
+                    type="button"
+                    className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+                    onClick={() => setRelationshipDetailsCollapsed(true)}
+                  >
+                    Collapse
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-        </aside>}
+                <div className="min-h-0 space-y-4 overflow-auto pr-1">
+                  {unions.map((union) => {
+                    const a = peopleMap.get(union.partner_a_person_id);
+                    const b = union.partner_b_person_id ? peopleMap.get(union.partner_b_person_id) : null;
+                    const kids = childrenLinks
+                      .filter((link) => link.union_id === union.id)
+                      .map((link) => peopleMap.get(link.child_person_id))
+                      .filter(Boolean) as Person[];
+
+                    return (
+                      <div key={union.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                          <span className="rounded-full bg-teal-100 px-3 py-1 font-medium text-teal-800">
+                            {a ? `${a.first_name} ${a.last_name}` : "Unknown Partner"}
+                          </span>
+                          <span className="text-slate-500">{union.union_type.toUpperCase()}</span>
+                          {b ? (
+                            <span className="rounded-full bg-cyan-100 px-3 py-1 font-medium text-cyan-800">
+                              {`${b.first_name} ${b.last_name}`}
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">Single Parent</span>
+                          )}
+                        </div>
+
+                        <div className="mt-3">
+                          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Children tied to this union</div>
+                          {kids.length === 0 ? (
+                            <p className="text-sm text-slate-500">No children linked to this union yet.</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {kids.map((kid) => (
+                                <span key={kid.id} className="rounded-full bg-indigo-100 px-3 py-1 text-sm font-medium text-indigo-800">
+                                  {kid.first_name} {kid.last_name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </aside>
+          )}
       </div>
     </div>
   );
