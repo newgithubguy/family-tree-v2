@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PencilLine, Plus, Link2 } from "lucide-react";
-import type { Person, UnionChildLink, UnionRecord } from "@/lib/types";
+import type { KinshipLink, KinshipType, Person, UnionChildLink, UnionRecord } from "@/lib/types";
 
 interface EditorPanelProps {
   treeId: string;
@@ -10,6 +10,7 @@ interface EditorPanelProps {
   people: Person[];
   unions: UnionRecord[];
   childrenLinks: UnionChildLink[];
+  kinshipLinks: KinshipLink[];
   selectedPersonId: string;
   onSelectedPersonChange: (personId: string) => void;
   collapsed: boolean;
@@ -23,6 +24,7 @@ export function EditorPanel({
   people,
   unions,
   childrenLinks,
+  kinshipLinks,
   selectedPersonId,
   onSelectedPersonChange,
   collapsed,
@@ -43,6 +45,10 @@ export function EditorPanel({
   const [connectionUnionId, setConnectionUnionId] = useState("");
   const [singleParentId, setSingleParentId] = useState("");
   const [childLinkMessage, setChildLinkMessage] = useState<string | null>(null);
+  const [selectedKinshipLinkId, setSelectedKinshipLinkId] = useState("");
+  const [kinshipPersonId, setKinshipPersonId] = useState("");
+  const [kinshipType, setKinshipType] = useState<KinshipType>("sibling");
+  const [kinshipMessage, setKinshipMessage] = useState<string | null>(null);
 
   const peopleNameMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -92,6 +98,16 @@ export function EditorPanel({
     [people, selectedPersonId]
   );
 
+  const kinshipLinksForPerson = useMemo(
+    () =>
+      selectedPersonId
+        ? kinshipLinks.filter(
+            (link) => link.person_a_id === selectedPersonId || link.person_b_id === selectedPersonId
+          )
+        : [],
+    [kinshipLinks, selectedPersonId]
+  );
+
   function unionDisplayName(union: UnionRecord) {
     const partnerAName = peopleNameMap[union.partner_a_person_id] ?? "Unknown parent";
     if (!union.partner_b_person_id) {
@@ -105,6 +121,16 @@ export function EditorPanel({
   function childLinkDisplayName(link: UnionChildLink) {
     const union = unions.find((record) => record.id === link.union_id);
     return union ? unionDisplayName(union) : "Unknown parent union";
+  }
+
+  function kinshipOtherPersonId(link: KinshipLink) {
+    return link.person_a_id === selectedPersonId ? link.person_b_id : link.person_a_id;
+  }
+
+  function kinshipDisplayName(link: KinshipLink) {
+    const otherPersonId = kinshipOtherPersonId(link);
+    const otherName = peopleNameMap[otherPersonId] ?? "Unknown person";
+    return `${link.kinship_type.toUpperCase()}: ${otherName}`;
   }
 
   useEffect(() => {
@@ -123,6 +149,10 @@ export function EditorPanel({
       setConnectionUnionId("");
       setSingleParentId("");
       setChildLinkMessage(null);
+      setSelectedKinshipLinkId("");
+      setKinshipPersonId("");
+      setKinshipType("sibling");
+      setKinshipMessage(null);
       return;
     }
 
@@ -180,6 +210,24 @@ export function EditorPanel({
     }
     setChildLinkMessage(null);
   }, [childLinksForPerson, selectedChildLinkId, unions]);
+
+  useEffect(() => {
+    if (!selectedKinshipLinkId) {
+      setKinshipPersonId("");
+      setKinshipType("sibling");
+      return;
+    }
+
+    const selectedLink = kinshipLinksForPerson.find((link) => link.id === selectedKinshipLinkId);
+    if (!selectedLink) {
+      setSelectedKinshipLinkId("");
+      return;
+    }
+
+    setKinshipPersonId(kinshipOtherPersonId(selectedLink));
+    setKinshipType(selectedLink.kinship_type);
+    setKinshipMessage(null);
+  }, [kinshipLinksForPerson, selectedKinshipLinkId]);
 
   async function submitPerson() {
     if (!canEdit) {
@@ -420,6 +468,87 @@ export function EditorPanel({
     }
 
     setChildLinkMessage("Parent link removed.");
+    await onRefresh();
+  }
+
+  async function submitKinshipLink() {
+    if (!canEdit || !selectedPersonId || !kinshipPersonId) {
+      return;
+    }
+
+    const response = await fetch(
+      selectedKinshipLinkId ? `/api/tree/kinship-links/${selectedKinshipLinkId}` : "/api/tree/kinship-links",
+      {
+        method: selectedKinshipLinkId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          treeId,
+          personAId: selectedPersonId,
+          personBId: kinshipPersonId,
+          kinshipType
+        })
+      }
+    );
+
+    if (!response.ok) {
+      setKinshipMessage(selectedKinshipLinkId ? "Failed to update kinship link." : "Failed to create kinship link.");
+      return;
+    }
+
+    const payload = (await response.json().catch(() => null)) as { link?: KinshipLink } | null;
+    const nextLinkId = payload?.link?.id ?? selectedKinshipLinkId;
+    setKinshipMessage(selectedKinshipLinkId ? "Kinship link updated." : "Kinship link created.");
+    await onRefresh();
+
+    if (nextLinkId) {
+      setSelectedKinshipLinkId(nextLinkId);
+    }
+  }
+
+  async function removeKinshipLink() {
+    if (!canEdit || !selectedKinshipLinkId) {
+      return;
+    }
+
+    const response = await fetch(`/api/tree/kinship-links/${selectedKinshipLinkId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ treeId })
+    });
+
+    if (!response.ok) {
+      setKinshipMessage("Failed to remove kinship link.");
+      return;
+    }
+
+    setSelectedKinshipLinkId("");
+    setKinshipMessage("Kinship link removed.");
+    await onRefresh();
+  }
+
+  async function removeKinshipLinkById(linkId: string) {
+    if (!canEdit || !linkId) {
+      return;
+    }
+
+    const response = await fetch(`/api/tree/kinship-links/${linkId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ treeId })
+    });
+
+    if (!response.ok) {
+      setKinshipMessage("Failed to remove kinship link.");
+      return;
+    }
+
+    if (selectedKinshipLinkId === linkId) {
+      setSelectedKinshipLinkId("");
+      setKinshipPersonId("");
+      setKinshipType("sibling");
+    }
+
+    setKinshipMessage("Kinship link removed.");
     await onRefresh();
   }
 
@@ -675,6 +804,98 @@ export function EditorPanel({
                   className="w-full rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50"
                 >
                   Remove Parent Link
+                </button>
+              )}
+            </section>
+          )}
+
+          {selectedPersonId && (
+            <section className="mt-5 space-y-2 rounded-xl border border-slate-200 p-3">
+              <h3 className="text-sm font-semibold text-slate-800">Manage Kinship Links</h3>
+              <p className="text-xs text-slate-500">Create sibling, cousin, aunt, and uncle links for the selected person.</p>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Current kinship links</p>
+                {kinshipLinksForPerson.length === 0 ? (
+                  <p className="text-xs text-slate-500">No kinship links yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {kinshipLinksForPerson.map((link) => (
+                      <div
+                        key={link.id}
+                        className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-2 py-2"
+                      >
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 truncate text-left text-xs text-slate-700"
+                          onClick={() => setSelectedKinshipLinkId(link.id)}
+                          title={kinshipDisplayName(link)}
+                        >
+                          {kinshipDisplayName(link)}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!canEdit}
+                          className="rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 disabled:opacity-50"
+                          onClick={() => void removeKinshipLinkById(link.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <select
+                className="w-full rounded-md border px-3 py-2 text-sm"
+                value={selectedKinshipLinkId}
+                onChange={(event) => setSelectedKinshipLinkId(event.target.value)}
+              >
+                <option value="">Create new kinship link</option>
+                {kinshipLinksForPerson.map((link) => (
+                  <option key={link.id} value={link.id}>
+                    {kinshipDisplayName(link)}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="w-full rounded-md border px-3 py-2 text-sm"
+                value={kinshipType}
+                onChange={(event) => setKinshipType(event.target.value as KinshipType)}
+              >
+                <option value="sibling">Sibling</option>
+                <option value="cousin">Cousin</option>
+                <option value="aunt">Aunt</option>
+                <option value="uncle">Uncle</option>
+              </select>
+              <select
+                className="w-full rounded-md border px-3 py-2 text-sm"
+                value={kinshipPersonId}
+                onChange={(event) => setKinshipPersonId(event.target.value)}
+              >
+                <option value="">Select related person</option>
+                {parentPersonOptions.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.first_name} {person.last_name}
+                  </option>
+                ))}
+              </select>
+              {kinshipMessage && <p className="text-xs text-slate-600">{kinshipMessage}</p>}
+              <button
+                disabled={!canEdit || !kinshipPersonId}
+                onClick={submitKinshipLink}
+                className="w-full rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {selectedKinshipLinkId ? "Save Kinship Link" : "Create Kinship Link"}
+              </button>
+              {selectedKinshipLinkId && (
+                <button
+                  disabled={!canEdit}
+                  onClick={removeKinshipLink}
+                  className="w-full rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50"
+                >
+                  Remove Kinship Link
                 </button>
               )}
             </section>

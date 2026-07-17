@@ -57,6 +57,15 @@ type UnionChildRow = {
   created_at: string;
 };
 
+type KinshipRow = {
+  id: string;
+  tree_id: string;
+  person_a_id: string;
+  person_b_id: string;
+  kinship_type: "sibling" | "cousin" | "aunt" | "uncle";
+  created_at: string;
+};
+
 type ActivityRow = {
   id: string;
   tree_id: string;
@@ -85,6 +94,7 @@ export type RelationalMockData = {
   people: PersonRow[];
   unions: UnionRow[];
   union_children: UnionChildRow[];
+  kinship_links: KinshipRow[];
   activity_log: ActivityRow[];
   node_positions: NodePositionRow[];
 };
@@ -224,6 +234,7 @@ function createSeedData(): RelationalMockData {
         created_at: now
       }
     ],
+    kinship_links: [],
     node_positions: people.map((person, index) => {
       const pos = defaultPosition(index);
       return {
@@ -268,6 +279,7 @@ function coerceDataShape(input: RelationalMockData | Record<string, unknown>): R
     people: raw.people ?? [],
     unions: raw.unions ?? [],
     union_children: raw.union_children ?? [],
+    kinship_links: raw.kinship_links ?? [],
     activity_log: raw.activity_log ?? [],
     node_positions: raw.node_positions ?? []
   };
@@ -355,6 +367,7 @@ export function replaceDatabase(input: RelationalMockData | Record<string, unkno
   instance.data.people = nextData.people;
   instance.data.unions = nextData.unions;
   instance.data.union_children = nextData.union_children;
+  instance.data.kinship_links = nextData.kinship_links;
   instance.data.activity_log = nextData.activity_log;
   instance.data.node_positions = nextData.node_positions;
 

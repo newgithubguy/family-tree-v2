@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement } from "react";
-import type { NodePosition, Person, UnionChildLink, UnionRecord } from "@/lib/types";
+import type { KinshipLink, NodePosition, Person, UnionChildLink, UnionRecord } from "@/lib/types";
 
 interface TreeCanvasProps {
   people: Person[];
   unions: UnionRecord[];
   childrenLinks: UnionChildLink[];
+  kinshipLinks: KinshipLink[];
   nodePositions?: NodePosition[];
   canEdit: boolean;
   selectedPersonId?: string;
@@ -79,6 +80,7 @@ export function TreeCanvas({
   people,
   unions,
   childrenLinks,
+  kinshipLinks,
   nodePositions,
   canEdit,
   selectedPersonId,
@@ -297,98 +299,34 @@ export function TreeCanvas({
       }
     }
 
-    const cousinPairs: KinPair[] = [];
-    const cousinPairKeys = new Set<string>();
-    for (let i = 0; i < personIds.length; i += 1) {
-      for (let j = i + 1; j < personIds.length; j += 1) {
-        const aId = personIds[i];
-        const bId = personIds[j];
-        const aParents = childToParents.get(aId) ?? new Set<string>();
-        const bParents = childToParents.get(bId) ?? new Set<string>();
-        if (aParents.size === 0 || bParents.size === 0) {
-          continue;
-        }
+    return { siblingPairs: { full, half } };
+  }, [childrenLinks, people, peopleMap, unions]);
 
-        const areSiblings = (siblingAdjacency.get(aId) ?? new Set<string>()).has(bId);
-        if (areSiblings) {
-          continue;
-        }
+  const managedKinshipPairs = useMemo(() => {
+    const sibling: KinPair[] = [];
+    const cousin: KinPair[] = [];
+    const aunt: KinPair[] = [];
+    const uncle: KinPair[] = [];
 
-        const areDirectLineage = aParents.has(bId) || bParents.has(aId);
-        if (areDirectLineage) {
-          continue;
-        }
-
-        let isCousin = false;
-        for (const parentA of aParents) {
-          const parentASiblings = siblingAdjacency.get(parentA) ?? new Set<string>();
-          for (const parentB of bParents) {
-            if (parentASiblings.has(parentB)) {
-              isCousin = true;
-              break;
-            }
-          }
-          if (isCousin) {
-            break;
-          }
-        }
-
-        if (!isCousin) {
-          continue;
-        }
-
-        const key = [aId, bId].sort().join("|");
-        if (cousinPairKeys.has(key)) {
-          continue;
-        }
-
-        cousinPairKeys.add(key);
-        cousinPairs.push({ key, aId, bId });
+    kinshipLinks.forEach((link) => {
+      const key = [link.person_a_id, link.person_b_id].sort().join("|");
+      const pair = { key, aId: link.person_a_id, bId: link.person_b_id };
+      if (link.kinship_type === "sibling") {
+        sibling.push(pair);
       }
-    }
-
-    const auntPairs: KinPair[] = [];
-    const unclePairs: KinPair[] = [];
-    const auntPairKeys = new Set<string>();
-    const unclePairKeys = new Set<string>();
-
-    personIds.forEach((personId) => {
-      const parentIds = childToParents.get(personId) ?? new Set<string>();
-      if (parentIds.size === 0) {
-        return;
+      if (link.kinship_type === "cousin") {
+        cousin.push(pair);
       }
-
-      parentIds.forEach((parentId) => {
-        const parentSiblings = siblingAdjacency.get(parentId) ?? new Set<string>();
-        parentSiblings.forEach((relativeId) => {
-          if (relativeId === personId) {
-            return;
-          }
-
-          const relative = peopleMap.get(relativeId);
-          const key = [personId, relativeId].sort().join("|");
-          if (relative?.sex === "female") {
-            if (auntPairKeys.has(key)) {
-              return;
-            }
-            auntPairKeys.add(key);
-            auntPairs.push({ key, aId: personId, bId: relativeId });
-            return;
-          }
-
-          if (relative?.sex === "male") {
-            if (unclePairKeys.has(key)) {
-              return;
-            }
-            unclePairKeys.add(key);
-            unclePairs.push({ key, aId: personId, bId: relativeId });
-          }
-        });
-      });
+      if (link.kinship_type === "aunt") {
+        aunt.push(pair);
+      }
+      if (link.kinship_type === "uncle") {
+        uncle.push(pair);
+      }
     });
 
-    return { siblingPairs: { full, half }, cousinPairs, auntPairs, unclePairs };
-  }, [childrenLinks, people, peopleMap, unions]);
+    return { sibling, cousin, aunt, uncle };
+  }, [kinshipLinks]);
 
   const connectors = useMemo(() => {
     const elements: ReactElement[] = [];
@@ -488,6 +426,7 @@ export function TreeCanvas({
     });
 
     if (showSiblingConnections) {
+      const derivedSiblingKeys = new Set(familyRelations.siblingPairs.full.map((pair) => pair.key));
       familyRelations.siblingPairs.full.forEach((pair) => {
         const a = centers[pair.aId];
         const b = centers[pair.bId];
@@ -521,6 +460,31 @@ export function TreeCanvas({
             stroke="#059669"
             strokeWidth={2}
             opacity={0.65}
+          />
+        );
+      });
+
+      managedKinshipPairs.sibling.forEach((pair) => {
+        if (derivedSiblingKeys.has(pair.key)) {
+          return;
+        }
+
+        const a = centers[pair.aId];
+        const b = centers[pair.bId];
+        if (!a || !b) {
+          return;
+        }
+
+        elements.push(
+          <line
+            key={`managed-sib-${pair.key}`}
+            x1={a.x}
+            y1={a.y}
+            x2={b.x}
+            y2={b.y}
+            stroke="#16a34a"
+            strokeWidth={2}
+            opacity={0.7}
           />
         );
       });
@@ -568,7 +532,7 @@ export function TreeCanvas({
     }
 
     if (showCousinConnections) {
-      familyRelations.cousinPairs.forEach((pair) => {
+      managedKinshipPairs.cousin.forEach((pair) => {
         const a = centers[pair.aId];
         const b = centers[pair.bId];
         if (!a || !b) {
@@ -592,7 +556,7 @@ export function TreeCanvas({
     }
 
     if (showAuntConnections) {
-      familyRelations.auntPairs.forEach((pair) => {
+      managedKinshipPairs.aunt.forEach((pair) => {
         const a = centers[pair.aId];
         const b = centers[pair.bId];
         if (!a || !b) {
@@ -615,7 +579,7 @@ export function TreeCanvas({
     }
 
     if (showUncleConnections) {
-      familyRelations.unclePairs.forEach((pair) => {
+      managedKinshipPairs.uncle.forEach((pair) => {
         const a = centers[pair.aId];
         const b = centers[pair.bId];
         if (!a || !b) {
@@ -643,6 +607,7 @@ export function TreeCanvas({
     childrenLinks,
     connectionStyle,
     familyRelations,
+    managedKinshipPairs,
     showAuntConnections,
     showChildConnections,
     showCousinConnections,

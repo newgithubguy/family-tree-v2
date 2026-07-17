@@ -7,6 +7,7 @@ import { ActivityLogPanel } from "@/components/ActivityLogPanel";
 import { EditorPanel } from "@/components/EditorPanel";
 import { AdminConsolePanel } from "@/components/AdminConsolePanel";
 import type { NodePosition, Person, UnionChildLink, UnionRecord } from "@/lib/types";
+import type { KinshipLink } from "@/lib/types";
 
 interface ApiState {
   tree: { id: string; name: string; owner_user_id?: string };
@@ -15,6 +16,7 @@ interface ApiState {
   people: Person[];
   unions: UnionRecord[];
   childrenLinks: UnionChildLink[];
+  kinshipLinks: KinshipLink[];
   nodePositions: NodePosition[];
   activity: {
     id: string;
@@ -104,6 +106,7 @@ export function Workspace() {
       people: payload.people ?? [],
       unions: payload.unions ?? [],
       childrenLinks: payload.childrenLinks ?? [],
+      kinshipLinks: payload.kinshipLinks ?? [],
       nodePositions: payload.nodePositions ?? [],
       activity: payload.activity ?? [],
       me: payload.me,
@@ -287,6 +290,7 @@ export function Workspace() {
               people={state.people}
               unions={state.unions}
               childrenLinks={state.childrenLinks}
+              kinshipLinks={state.kinshipLinks}
               selectedPersonId={selectedPersonId}
               onSelectedPersonChange={setSelectedPersonId}
               collapsed={editorCollapsed}
@@ -322,6 +326,7 @@ export function Workspace() {
             people={state.people}
             unions={state.unions}
             childrenLinks={state.childrenLinks}
+            kinshipLinks={state.kinshipLinks}
             nodePositions={state.nodePositions ?? []}
             canEdit={state.canEdit}
             selectedPersonId={selectedPersonId}

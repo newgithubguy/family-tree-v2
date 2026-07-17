@@ -35,11 +35,13 @@ export async function PATCH(request: NextRequest) {
   const peopleRemoved = db.data.people.filter((row) => row.tree_id === parsed.data.treeId).length;
   const unionsRemoved = db.data.unions.filter((row) => row.tree_id === parsed.data.treeId).length;
   const linksRemoved = db.data.union_children.filter((row) => row.tree_id === parsed.data.treeId).length;
+  const kinshipRemoved = db.data.kinship_links.filter((row) => row.tree_id === parsed.data.treeId).length;
   const positionsRemoved = db.data.node_positions.filter((row) => row.tree_id === parsed.data.treeId).length;
 
   db.data.people = db.data.people.filter((row) => row.tree_id !== parsed.data.treeId);
   db.data.unions = db.data.unions.filter((row) => row.tree_id !== parsed.data.treeId);
   db.data.union_children = db.data.union_children.filter((row) => row.tree_id !== parsed.data.treeId);
+  db.data.kinship_links = db.data.kinship_links.filter((row) => row.tree_id !== parsed.data.treeId);
   db.data.node_positions = db.data.node_positions.filter((row) => row.tree_id !== parsed.data.treeId);
   db.data.activity_log = db.data.activity_log.filter((row) => row.tree_id !== parsed.data.treeId);
 
@@ -54,6 +56,7 @@ export async function PATCH(request: NextRequest) {
       people: peopleRemoved,
       unions: unionsRemoved,
       union_children: linksRemoved,
+      kinship_links: kinshipRemoved,
       node_positions: positionsRemoved
     }),
     new_values: JSON.stringify({ reset_at: currentTimestamp() }),
@@ -76,6 +79,7 @@ export async function PATCH(request: NextRequest) {
       people: peopleRemoved,
       unions: unionsRemoved,
       unionChildren: linksRemoved,
+      kinshipLinks: kinshipRemoved,
       nodePositions: positionsRemoved
     }
   });

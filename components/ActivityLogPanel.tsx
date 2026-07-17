@@ -119,6 +119,23 @@ function describeActivity(item: ActivityItem, peopleNameMap: Record<string, stri
     return `${actorName} updated how ${childName} is connected.`;
   }
 
+  if (item.target_entity === "kinship_links") {
+    const source = newObject ?? oldObject;
+    const aId = asText(source?.person_a_id);
+    const bId = asText(source?.person_b_id);
+    const aName = aId ? peopleNameMap[aId] ?? aId : "someone";
+    const bName = bId ? peopleNameMap[bId] ?? bId : "someone";
+    const kinship = asText(source?.kinship_type) || "kinship";
+
+    if (item.action === "CREATE") {
+      return `${actorName} added a ${kinship} link between ${aName} and ${bName}.`;
+    }
+    if (item.action === "DELETE") {
+      return `${actorName} removed a ${kinship} link between ${aName} and ${bName}.`;
+    }
+    return `${actorName} updated a ${kinship} link between ${aName} and ${bName}.`;
+  }
+
   if (item.target_entity === "node_positions") {
     const source = newObject ?? oldObject;
     const personId = asText(source?.person_id);

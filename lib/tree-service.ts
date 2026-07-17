@@ -41,6 +41,7 @@ export function getTreeState(treeId: string) {
   const people = db.data.people.filter((p) => p.tree_id === treeId);
   const unions = db.data.unions.filter((u) => u.tree_id === treeId);
   const childrenLinks = db.data.union_children.filter((uc) => uc.tree_id === treeId);
+  const kinshipLinks = db.data.kinship_links.filter((link) => link.tree_id === treeId);
   const nodePositions = db.data.node_positions.filter((np) => np.tree_id === treeId);
   const activity = db.data.activity_log
     .filter((a) => a.tree_id === treeId)
@@ -53,9 +54,18 @@ export function getTreeState(treeId: string) {
     people,
     unions,
     childrenLinks,
+    kinshipLinks,
     nodePositions,
     activity
   };
+}
+
+function normalizeKinshipPair(aId: string, bId: string, kinshipType: "sibling" | "cousin" | "aunt" | "uncle") {
+  if (kinshipType === "aunt" || kinshipType === "uncle") {
+    return { personAId: aId, personBId: bId };
+  }
+
+  return aId <= bId ? { personAId: aId, personBId: bId } : { personAId: bId, personBId: aId };
 }
 
 export function createPerson(input: {
@@ -265,6 +275,27 @@ export function deletePerson(input: { id: string; treeId: string; actorUserId: s
       actorUserId: input.actorUserId,
       action: "DELETE",
       targetEntity: "union_children",
+      targetId: link.id,
+      oldValues: link,
+      newValues: null
+    });
+  }
+
+  const kinshipLinks = db.data.kinship_links.filter(
+    (link) =>
+      link.tree_id === input.treeId &&
+      (link.person_a_id === input.id || link.person_b_id === input.id)
+  );
+  db.data.kinship_links = db.data.kinship_links.filter(
+    (link) =>
+      !(link.tree_id === input.treeId && (link.person_a_id === input.id || link.person_b_id === input.id))
+  );
+  for (const link of kinshipLinks) {
+    logActivity({
+      treeId: input.treeId,
+      actorUserId: input.actorUserId,
+      action: "DELETE",
+      targetEntity: "kinship_links",
       targetId: link.id,
       oldValues: link,
       newValues: null
@@ -496,6 +527,112 @@ export function deleteChildLink(input: { id: string; treeId: string; actorUserId
     actorUserId: input.actorUserId,
     action: "DELETE",
     targetEntity: "union_children",
+    targetId: input.id,
+    oldValues: link,
+    newValues: null
+  });
+
+  return true;
+}
+
+export function createKinshipLink(input: {
+  treeId: string;
+  actorUserId: string;
+  personAId: string;
+  personBId: string;
+  kinshipType: "sibling" | "cousin" | "aunt" | "uncle";
+}) {
+  const db = getDb();
+  const normalized = normalizeKinshipPair(input.personAId, input.personBId, input.kinshipType);
+
+  const existing = db.data.kinship_links.find(
+    (link) =>
+      link.tree_id === input.treeId &&
+      link.person_a_id === normalized.personAId &&
+      link.person_b_id === normalized.personBId &&
+      link.kinship_type === input.kinshipType
+  );
+  if (existing) {
+    return existing;
+  }
+
+  const created = {
+    id: randomUUID(),
+    tree_id: input.treeId,
+    person_a_id: normalized.personAId,
+    person_b_id: normalized.personBId,
+    kinship_type: input.kinshipType,
+    created_at: currentTimestamp()
+  };
+
+  db.data.kinship_links.push(created);
+  db.save();
+
+  logActivity({
+    treeId: input.treeId,
+    actorUserId: input.actorUserId,
+    action: "CREATE",
+    targetEntity: "kinship_links",
+    targetId: created.id,
+    oldValues: null,
+    newValues: created
+  });
+
+  return created;
+}
+
+export function updateKinshipLink(input: {
+  id: string;
+  treeId: string;
+  actorUserId: string;
+  personAId: string;
+  personBId: string;
+  kinshipType: "sibling" | "cousin" | "aunt" | "uncle";
+}) {
+  const db = getDb();
+  const link = db.data.kinship_links.find((record) => record.id === input.id && record.tree_id === input.treeId);
+  if (!link) {
+    return null;
+  }
+
+  const current = { ...link };
+  const normalized = normalizeKinshipPair(input.personAId, input.personBId, input.kinshipType);
+  link.person_a_id = normalized.personAId;
+  link.person_b_id = normalized.personBId;
+  link.kinship_type = input.kinshipType;
+
+  db.save();
+
+  logActivity({
+    treeId: input.treeId,
+    actorUserId: input.actorUserId,
+    action: "UPDATE",
+    targetEntity: "kinship_links",
+    targetId: input.id,
+    oldValues: current,
+    newValues: link
+  });
+
+  return link;
+}
+
+export function deleteKinshipLink(input: { id: string; treeId: string; actorUserId: string }) {
+  const db = getDb();
+  const link = db.data.kinship_links.find((record) => record.id === input.id && record.tree_id === input.treeId);
+  if (!link) {
+    return false;
+  }
+
+  db.data.kinship_links = db.data.kinship_links.filter(
+    (record) => !(record.id === input.id && record.tree_id === input.treeId)
+  );
+  db.save();
+
+  logActivity({
+    treeId: input.treeId,
+    actorUserId: input.actorUserId,
+    action: "DELETE",
+    targetEntity: "kinship_links",
     targetId: input.id,
     oldValues: link,
     newValues: null

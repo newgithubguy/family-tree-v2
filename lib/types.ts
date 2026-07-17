@@ -40,6 +40,16 @@ export interface UnionChildLink {
   child_person_id: string;
 }
 
+export type KinshipType = "sibling" | "cousin" | "aunt" | "uncle";
+
+export interface KinshipLink {
+  id: string;
+  tree_id: string;
+  person_a_id: string;
+  person_b_id: string;
+  kinship_type: KinshipType;
+}
+
 export interface ActivityLog {
   id: string;
   tree_id: string;
