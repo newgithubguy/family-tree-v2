@@ -248,6 +248,35 @@ export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefre
     setBusy(false);
   }
 
+  async function resetTree() {
+    const confirmation = window.prompt(
+      "This will erase people, unions, parent links, positions, and activity for this tree. Type RESET to continue."
+    );
+
+    if (confirmation !== "RESET") {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    const response = await fetch("/api/admin/reset-tree", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ treeId })
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      setError(payload?.error ?? "Failed to reset tree");
+      setBusy(false);
+      return;
+    }
+
+    await onRefresh();
+    setBusy(false);
+  }
+
   return (
     <section className="panel mt-4 p-4">
       <div className="mb-4 flex items-center gap-2">
@@ -396,6 +425,21 @@ export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefre
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3">
+        <h3 className="mb-2 text-sm font-semibold text-rose-800">Reset Family Tree</h3>
+        <p className="mb-3 text-xs text-rose-700">
+          Use this only after taking a backup. This removes all people, relationships, links, positions, and activity for this tree.
+        </p>
+        <button
+          type="button"
+          disabled={busy}
+          className="w-full rounded-md bg-rose-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          onClick={resetTree}
+        >
+          Reset Tree
+        </button>
       </div>
 
       <div className="mt-4 rounded-lg border border-slate-200 p-3">
