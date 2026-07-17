@@ -241,6 +241,14 @@ export function Workspace() {
           >
             Sign Out
           </button>
+          {editorCollapsed && (
+            <button
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+              onClick={() => setEditorCollapsed(false)}
+            >
+              Show Edit Panel
+            </button>
+          )}
           {activityCollapsed && (
             <button
               className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
@@ -284,18 +292,20 @@ export function Workspace() {
             onCollapsedChange={setActivityCollapsed}
           />
         )}
-        <EditorPanel
-          treeId={treeId}
-          canEdit={state.canEdit}
-          people={state.people}
-          unions={state.unions}
-          childrenLinks={state.childrenLinks}
-          selectedPersonId={selectedPersonId}
-          onSelectedPersonChange={setSelectedPersonId}
-          collapsed={editorCollapsed}
-          onCollapsedChange={setEditorCollapsed}
-          onRefresh={refresh}
-        />
+        {!editorCollapsed && (
+          <EditorPanel
+            treeId={treeId}
+            canEdit={state.canEdit}
+            people={state.people}
+            unions={state.unions}
+            childrenLinks={state.childrenLinks}
+            selectedPersonId={selectedPersonId}
+            onSelectedPersonChange={setSelectedPersonId}
+            collapsed={editorCollapsed}
+            onCollapsedChange={setEditorCollapsed}
+            onRefresh={refresh}
+          />
+        )}
       </section>
 
       {state.isAdmin && (
