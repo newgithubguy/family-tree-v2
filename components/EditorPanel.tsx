@@ -183,23 +183,14 @@ export function EditorPanel({
       return;
     }
 
-    const payload = (await response.json().catch(() => null)) as { person?: Person } | null;
-    const createdPersonId = payload?.person?.id ?? "";
-
     setPersonMessage(selectedPersonId ? "Person updated." : "Person created.");
-    if (!selectedPersonId) {
-      setFirstName("");
-      setLastName("");
-      setSex("unknown");
-      setBirthDate("");
-      setNotes("");
-    }
-
+    onSelectedPersonChange("");
+    setFirstName("");
+    setLastName("");
+    setSex("unknown");
+    setBirthDate("");
+    setNotes("");
     await onRefresh();
-
-    if (!selectedPersonId && createdPersonId) {
-      onSelectedPersonChange(createdPersonId);
-    }
   }
 
   async function removePerson() {
@@ -226,6 +217,11 @@ export function EditorPanel({
     }
 
     onSelectedPersonChange("");
+    setFirstName("");
+    setLastName("");
+    setSex("unknown");
+    setBirthDate("");
+    setNotes("");
     setPersonMessage("Person removed.");
     await onRefresh();
   }
