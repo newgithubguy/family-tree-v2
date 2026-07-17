@@ -95,7 +95,11 @@ export function TreeCanvas({
   const [showSiblingConnections, setShowSiblingConnections] = useState(true);
   const [showHalfSiblingConnections, setShowHalfSiblingConnections] = useState(true);
   const [connectionStyle, setConnectionStyle] = useState<ConnectionStyle>("curved");
-  const boardRef = useRef<HTMLDivElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(BOARD_WIDTH);
+
+  const boardScale = viewportWidth / BOARD_WIDTH;
+  const scaledBoardHeight = BOARD_HEIGHT * boardScale;
 
   const centers = useMemo(() => {
     const next: Record<string, { x: number; y: number }> = {};
@@ -109,6 +113,26 @@ export function TreeCanvas({
   }, [positions]);
 
   useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    const updateViewportWidth = () => {
+      setViewportWidth(viewport.clientWidth || BOARD_WIDTH);
+    };
+
+    updateViewportWidth();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateViewportWidth();
+    });
+
+    resizeObserver.observe(viewport);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  useEffect(() => {
     if (!dragState) {
       return;
     }
@@ -116,13 +140,15 @@ export function TreeCanvas({
     const currentDrag = dragState;
 
     function onMove(event: PointerEvent) {
-      const board = boardRef.current;
-      if (!board) {
+      const viewport = viewportRef.current;
+      if (!viewport) {
         return;
       }
-      const bounds = board.getBoundingClientRect();
-      const x = clamp(event.clientX - bounds.left - currentDrag.offsetX, 8, BOARD_WIDTH - 120);
-      const y = clamp(event.clientY - bounds.top - currentDrag.offsetY, 8, BOARD_HEIGHT - 52);
+      const bounds = viewport.getBoundingClientRect();
+      const logicalX = (event.clientX - bounds.left) / boardScale;
+      const logicalY = (event.clientY - bounds.top) / boardScale;
+      const x = clamp(logicalX - currentDrag.offsetX, 8, BOARD_WIDTH - 120);
+      const y = clamp(logicalY - currentDrag.offsetY, 8, BOARD_HEIGHT - 52);
 
       setDragPositions((current) => ({
         ...current,
@@ -149,7 +175,7 @@ export function TreeCanvas({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [dragState, onPositionCommit, positions]);
+  }, [boardScale, dragState, onPositionCommit, positions]);
 
   const siblingPairs = useMemo(() => {
     const unionById = new Map(unions.map((union) => [union.id, union]));
@@ -459,40 +485,47 @@ export function TreeCanvas({
           </span>
         </div>
         <div
-          ref={boardRef}
-          className="relative overflow-hidden rounded-lg border border-slate-300 bg-white"
-          style={{ width: BOARD_WIDTH, height: BOARD_HEIGHT }}
+          ref={viewportRef}
+          className="relative w-full overflow-hidden rounded-lg border border-slate-300 bg-white"
+          style={{ height: scaledBoardHeight }}
         >
-          <svg className="pointer-events-none absolute inset-0 z-0" width={BOARD_WIDTH} height={BOARD_HEIGHT}>
-            {connectors}
-          </svg>
-          {people.map((person) => {
-            const position = positions[person.id] ?? { x: 20, y: 20 };
-            return (
-              <button
-                key={person.id}
-                type="button"
-                onClick={() => onSelectPerson?.(person.id)}
-                onPointerDown={(event) => {
-                  if (!canEdit || !boardRef.current) {
-                    return;
-                  }
-                  const bounds = boardRef.current.getBoundingClientRect();
-                  const offsetX = event.clientX - bounds.left - position.x;
-                  const offsetY = event.clientY - bounds.top - position.y;
-                  setDragState({ personId: person.id, offsetX, offsetY });
-                }}
-                className={`absolute z-10 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm ${
-                  selectedPersonId === person.id
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-teal-300 bg-teal-100 text-teal-900"
-                }`}
-                style={{ left: position.x, top: position.y, cursor: canEdit ? "grab" : "default" }}
-              >
-                {person.first_name} {person.last_name}
-              </button>
-            );
-          })}
+          <div
+            className="absolute left-0 top-0 origin-top-left"
+            style={{ width: BOARD_WIDTH, height: BOARD_HEIGHT, transform: `scale(${boardScale})` }}
+          >
+            <svg className="pointer-events-none absolute inset-0 z-0" width={BOARD_WIDTH} height={BOARD_HEIGHT}>
+              {connectors}
+            </svg>
+            {people.map((person) => {
+              const position = positions[person.id] ?? { x: 20, y: 20 };
+              return (
+                <button
+                  key={person.id}
+                  type="button"
+                  onClick={() => onSelectPerson?.(person.id)}
+                  onPointerDown={(event) => {
+                    if (!canEdit || !viewportRef.current) {
+                      return;
+                    }
+                    const bounds = viewportRef.current.getBoundingClientRect();
+                    const logicalX = (event.clientX - bounds.left) / boardScale;
+                    const logicalY = (event.clientY - bounds.top) / boardScale;
+                    const offsetX = logicalX - position.x;
+                    const offsetY = logicalY - position.y;
+                    setDragState({ personId: person.id, offsetX, offsetY });
+                  }}
+                  className={`absolute z-10 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm ${
+                    selectedPersonId === person.id
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-teal-300 bg-teal-100 text-teal-900"
+                  }`}
+                  style={{ left: position.x, top: position.y, cursor: canEdit ? "grab" : "default" }}
+                >
+                  {person.first_name} {person.last_name}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
