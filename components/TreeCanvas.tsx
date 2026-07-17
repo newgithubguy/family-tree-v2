@@ -618,6 +618,18 @@ export function TreeCanvas({
             </svg>
             {people.map((person) => {
               const position = positions[person.id] ?? { x: 20, y: 20 };
+              const unselectedBubbleClass =
+                person.sex === "female"
+                  ? "border-pink-300 bg-pink-100 text-pink-900"
+                  : person.sex === "male"
+                    ? "border-sky-300 bg-sky-100 text-sky-900"
+                    : "border-teal-300 bg-teal-100 text-teal-900";
+              const selectedBubbleClass =
+                person.sex === "female"
+                  ? "border-pink-500 bg-pink-200 text-pink-950"
+                  : person.sex === "male"
+                    ? "border-sky-500 bg-sky-200 text-sky-950"
+                    : "border-slate-900 bg-slate-900 text-white";
               return (
                 <button
                   key={person.id}
@@ -649,9 +661,7 @@ export function TreeCanvas({
                     setDragState({ mode: "person", personId: person.id, offsetX, offsetY });
                   }}
                   className={`absolute z-10 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm ${
-                    selectedPersonId === person.id
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-teal-300 bg-teal-100 text-teal-900"
+                    selectedPersonId === person.id ? selectedBubbleClass : unselectedBubbleClass
                   }`}
                   style={{ left: position.x, top: position.y, cursor: canEdit ? (moveAllMode ? "move" : "grab") : "default" }}
                 >

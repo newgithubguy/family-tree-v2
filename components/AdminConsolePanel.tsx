@@ -22,10 +22,20 @@ interface AdminConsolePanelProps {
   users: User[];
   members: Member[];
   ownerUserId?: string;
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
   onRefresh: () => Promise<void>;
 }
 
-export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefresh }: AdminConsolePanelProps) {
+export function AdminConsolePanel({
+  treeId,
+  users,
+  members,
+  ownerUserId,
+  collapsed,
+  onCollapsedChange,
+  onRefresh
+}: AdminConsolePanelProps) {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -279,10 +289,22 @@ export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefre
 
   return (
     <section className="panel mt-4 p-4">
-      <div className="mb-4 flex items-center gap-2">
-        <Shield className="h-5 w-5 text-sky-700" />
-        <h2 className="text-lg font-semibold text-slate-800">Admin Console</h2>
+      <div className={`flex items-center justify-between gap-2 ${collapsed ? "mb-0" : "mb-4"}`}>
+        <div className="flex items-center gap-2">
+          <Shield className="h-5 w-5 text-sky-700" />
+          {!collapsed && <h2 className="text-lg font-semibold text-slate-800">Admin Console</h2>}
+        </div>
+        <button
+          type="button"
+          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+          onClick={() => onCollapsedChange(!collapsed)}
+        >
+          {collapsed ? "Expand" : "Collapse"}
+        </button>
       </div>
+
+      {collapsed ? null : (
+        <>
 
       {error && <p className="mb-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
 
@@ -478,6 +500,8 @@ export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefre
           })}
         </div>
       </div>
+        </>
+      )}
     </section>
   );
 }

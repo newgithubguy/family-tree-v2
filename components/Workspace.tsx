@@ -44,6 +44,7 @@ export function Workspace() {
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
   const [activityCollapsed, setActivityCollapsed] = useState(false);
   const [editorCollapsed, setEditorCollapsed] = useState(false);
+  const [adminCollapsed, setAdminCollapsed] = useState(false);
   const [selectedPersonId, setSelectedPersonId] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -222,7 +223,7 @@ export function Workspace() {
   }
 
   return (
-    <main className="mx-auto max-w-[1700px] p-4 md:p-6">
+    <main className="mx-auto max-w-[1900px] p-4 md:p-6">
       <header className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-panel md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{state.tree.name}</h1>
@@ -257,66 +258,72 @@ export function Workspace() {
               Show Activity
             </button>
           )}
+          {state.isAdmin && adminCollapsed && (
+            <button
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+              onClick={() => setAdminCollapsed(false)}
+            >
+              Show Admin Console
+            </button>
+          )}
         </div>
       </header>
 
       {error && <p className="mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
 
-      <section
-        className={`grid gap-4 ${
-          activityCollapsed && editorCollapsed
-            ? "lg:grid-cols-[minmax(760px,1fr)_88px]"
-            : activityCollapsed
-              ? "lg:grid-cols-[minmax(760px,1fr)_minmax(300px,360px)]"
-              : editorCollapsed
-                ? "lg:grid-cols-[minmax(640px,1fr)_420px_88px]"
-                : "lg:grid-cols-[minmax(640px,1fr)_420px_360px]"
-        }`}
-      >
-        <TreeCanvas
-          people={state.people}
-          unions={state.unions}
-          childrenLinks={state.childrenLinks}
-          nodePositions={state.nodePositions ?? []}
-          canEdit={state.canEdit}
-          selectedPersonId={selectedPersonId}
-          onSelectPerson={setSelectedPersonId}
-          onPositionCommit={onPositionCommit}
-        />
-        {!activityCollapsed && (
-          <ActivityLogPanel
-            activity={state.activity}
-            userMap={userMap}
-            peopleNameMap={peopleNameMap}
-            collapsed={activityCollapsed}
-            onCollapsedChange={setActivityCollapsed}
-          />
-        )}
-        {!editorCollapsed && (
-          <EditorPanel
-            treeId={treeId}
-            canEdit={state.canEdit}
+      <section className="grid gap-4 lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)]">
+        <div className="order-2 space-y-4 lg:order-1">
+          {!editorCollapsed && (
+            <EditorPanel
+              treeId={treeId}
+              canEdit={state.canEdit}
+              people={state.people}
+              unions={state.unions}
+              childrenLinks={state.childrenLinks}
+              selectedPersonId={selectedPersonId}
+              onSelectedPersonChange={setSelectedPersonId}
+              collapsed={editorCollapsed}
+              onCollapsedChange={setEditorCollapsed}
+              onRefresh={refresh}
+            />
+          )}
+
+          {!activityCollapsed && (
+            <ActivityLogPanel
+              activity={state.activity}
+              userMap={userMap}
+              peopleNameMap={peopleNameMap}
+              collapsed={activityCollapsed}
+              onCollapsedChange={setActivityCollapsed}
+            />
+          )}
+
+          {state.isAdmin && (
+            <AdminConsolePanel
+              treeId={treeId}
+              users={state.users}
+              members={state.members}
+              ownerUserId={state.tree.owner_user_id}
+              collapsed={adminCollapsed}
+              onCollapsedChange={setAdminCollapsed}
+              onRefresh={refresh}
+            />
+          )}
+        </div>
+
+        <div className="order-1 lg:order-2">
+          <TreeCanvas
             people={state.people}
             unions={state.unions}
             childrenLinks={state.childrenLinks}
+            nodePositions={state.nodePositions ?? []}
+            canEdit={state.canEdit}
             selectedPersonId={selectedPersonId}
-            onSelectedPersonChange={setSelectedPersonId}
-            collapsed={editorCollapsed}
-            onCollapsedChange={setEditorCollapsed}
-            onRefresh={refresh}
+            onSelectPerson={setSelectedPersonId}
+            onPositionCommit={onPositionCommit}
           />
-        )}
+        </div>
       </section>
-
-      {state.isAdmin && (
-        <AdminConsolePanel
-          treeId={treeId}
-          users={state.users}
-          members={state.members}
-          ownerUserId={state.tree.owner_user_id}
-          onRefresh={refresh}
-        />
-      )}
     </main>
   );
 }
