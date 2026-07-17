@@ -33,6 +33,7 @@ export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefre
 
   const [selectedExistingUserId, setSelectedExistingUserId] = useState("");
   const [selectedExistingRole, setSelectedExistingRole] = useState<"viewer" | "editor">("viewer");
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -148,6 +149,67 @@ export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefre
     setBusy(false);
   }
 
+  async function downloadBackup() {
+    setBusy(true);
+    setError(null);
+
+    const response = await fetch(`/api/admin/backup?treeId=${treeId}`, {
+      method: "GET"
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      setError(payload?.error ?? "Failed to download backup");
+      setBusy(false);
+      return;
+    }
+
+    const payload = (await response.json()) as { treeId: string; exportedAt: string; backup: unknown };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${payload.treeId}-backup-${payload.exportedAt.replace(/[:.]/g, "-")}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setBusy(false);
+  }
+
+  async function restoreBackup() {
+    if (!restoreFile) {
+      return;
+    }
+
+    const confirmed = window.confirm("Restore this backup? This will overwrite the current tree data.");
+    if (!confirmed) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    const rawText = await restoreFile.text();
+    const parsedFile = JSON.parse(rawText) as { backup?: unknown };
+    const backup = parsedFile.backup ?? parsedFile;
+
+    const response = await fetch("/api/admin/backup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ treeId, backup })
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      setError(payload?.error ?? "Failed to restore backup");
+      setBusy(false);
+      return;
+    }
+
+    setRestoreFile(null);
+    await onRefresh();
+    setBusy(false);
+  }
+
   return (
     <section className="panel mt-4 p-4">
       <div className="mb-4 flex items-center gap-2">
@@ -230,6 +292,42 @@ export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefre
               onClick={addExistingUser}
             >
               Add Member
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 p-3">
+          <h3 className="mb-2 text-sm font-semibold text-slate-800">Backup Tree Data</h3>
+          <p className="mb-3 text-xs text-slate-500">Download the current database as a JSON backup.</p>
+          <button
+            type="button"
+            disabled={busy}
+            className="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            onClick={downloadBackup}
+          >
+            Download Backup
+          </button>
+        </div>
+
+        <div className="rounded-lg border border-slate-200 p-3">
+          <h3 className="mb-2 text-sm font-semibold text-slate-800">Restore Tree Data</h3>
+          <p className="mb-3 text-xs text-slate-500">Upload a previously downloaded backup JSON file to replace current data.</p>
+          <div className="space-y-2">
+            <input
+              className="w-full rounded-md border px-3 py-2 text-sm"
+              type="file"
+              accept="application/json"
+              onChange={(event) => setRestoreFile(event.target.files?.[0] ?? null)}
+            />
+            <button
+              type="button"
+              disabled={busy || !restoreFile}
+              className="w-full rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              onClick={restoreBackup}
+            >
+              Restore Backup
             </button>
           </div>
         </div>

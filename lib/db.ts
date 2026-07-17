@@ -332,6 +332,28 @@ export function getDb(): RelationalMockDb {
   return db;
 }
 
+export function exportDatabase(): RelationalMockData {
+  const snapshot = getDb().data;
+  return JSON.parse(JSON.stringify(snapshot)) as RelationalMockData;
+}
+
+export function replaceDatabase(input: RelationalMockData | Record<string, unknown>) {
+  const nextData = coerceDataShape(input);
+  const instance = getDb();
+
+  instance.data.users = nextData.users;
+  instance.data.trees = nextData.trees;
+  instance.data.tree_members = nextData.tree_members;
+  instance.data.people = nextData.people;
+  instance.data.unions = nextData.unions;
+  instance.data.union_children = nextData.union_children;
+  instance.data.activity_log = nextData.activity_log;
+  instance.data.node_positions = nextData.node_positions;
+
+  instance.save();
+  return instance.data;
+}
+
 export function currentTimestamp() {
   return nowIso();
 }
