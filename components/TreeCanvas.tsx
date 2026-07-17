@@ -556,13 +556,15 @@ export function TreeCanvas({
               <option value="curved">Curved lines</option>
               <option value="straight">Straight lines</option>
             </select>
-            <button
-              type="button"
-              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700"
-              onClick={() => setRelationshipDetailsCollapsed((current) => !current)}
-            >
-              {relationshipDetailsCollapsed ? "Show Relationship Details" : "Hide Relationship Details"}
-            </button>
+            {relationshipDetailsCollapsed && (
+              <button
+                type="button"
+                className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700"
+                onClick={() => setRelationshipDetailsCollapsed(false)}
+              >
+                Show Relationship Details
+              </button>
+            )}
           </div>
           <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-slate-600">
             <span className="inline-flex items-center gap-2">
@@ -687,7 +689,16 @@ export function TreeCanvas({
         </div>
 
         {!relationshipDetailsCollapsed && <aside className="min-h-0 overflow-auto rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm">
-          <h3 className="mb-3 text-sm font-semibold text-slate-800">Relationship Details</h3>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-slate-800">Relationship Details</h3>
+            <button
+              type="button"
+              className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+              onClick={() => setRelationshipDetailsCollapsed(true)}
+            >
+              Collapse
+            </button>
+          </div>
           <div className="space-y-4">
             {unions.map((union) => {
               const a = peopleMap.get(union.partner_a_person_id);
