@@ -38,6 +38,12 @@ type SiblingPair = {
   bId: string;
 };
 
+type KinPair = {
+  key: string;
+  aId: string;
+  bId: string;
+};
+
 const BASE_BOARD_WIDTH = 900;
 const BASE_BOARD_HEIGHT = 380;
 const NODE_WIDTH = 120;
@@ -105,6 +111,9 @@ export function TreeCanvas({
   const [showChildConnections, setShowChildConnections] = useState(true);
   const [showSiblingConnections, setShowSiblingConnections] = useState(true);
   const [showHalfSiblingConnections, setShowHalfSiblingConnections] = useState(true);
+  const [showCousinConnections, setShowCousinConnections] = useState(true);
+  const [showAuntConnections, setShowAuntConnections] = useState(true);
+  const [showUncleConnections, setShowUncleConnections] = useState(true);
   const [connectionStyle, setConnectionStyle] = useState<ConnectionStyle>("curved");
   const [relationshipDetailsCollapsed, setRelationshipDetailsCollapsed] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -228,9 +237,9 @@ export function TreeCanvas({
     };
   }, [boardHeight, boardScale, boardWidth, dragState, onPositionCommit, people, positions]);
 
-  const siblingPairs = useMemo(() => {
+  const familyRelations = useMemo(() => {
     const unionById = new Map(unions.map((union) => [union.id, union]));
-    const childIds = Array.from(new Set(childrenLinks.map((link) => link.child_person_id)));
+    const personIds = Array.from(new Set(people.map((person) => person.id)));
     const childToUnionIds = new Map<string, Set<string>>();
     const childToParents = new Map<string, Set<string>>();
 
@@ -254,11 +263,12 @@ export function TreeCanvas({
 
     const full: SiblingPair[] = [];
     const half: SiblingPair[] = [];
+    const siblingAdjacency = new Map<string, Set<string>>();
 
-    for (let i = 0; i < childIds.length; i += 1) {
-      for (let j = i + 1; j < childIds.length; j += 1) {
-        const aId = childIds[i];
-        const bId = childIds[j];
+    for (let i = 0; i < personIds.length; i += 1) {
+      for (let j = i + 1; j < personIds.length; j += 1) {
+        const aId = personIds[i];
+        const bId = personIds[j];
         const aParents = childToParents.get(aId) ?? new Set<string>();
         const bParents = childToParents.get(bId) ?? new Set<string>();
         if (aParents.size === 0 || bParents.size === 0) {
@@ -271,6 +281,13 @@ export function TreeCanvas({
         }
 
         const key = [aId, bId].sort().join("|");
+        const aSiblings = siblingAdjacency.get(aId) ?? new Set<string>();
+        aSiblings.add(bId);
+        siblingAdjacency.set(aId, aSiblings);
+        const bSiblings = siblingAdjacency.get(bId) ?? new Set<string>();
+        bSiblings.add(aId);
+        siblingAdjacency.set(bId, bSiblings);
+
         if (sharedParentCount >= 2) {
           full.push({ key, aId, bId });
           continue;
@@ -280,8 +297,98 @@ export function TreeCanvas({
       }
     }
 
-    return { full, half };
-  }, [childrenLinks, unions]);
+    const cousinPairs: KinPair[] = [];
+    const cousinPairKeys = new Set<string>();
+    for (let i = 0; i < personIds.length; i += 1) {
+      for (let j = i + 1; j < personIds.length; j += 1) {
+        const aId = personIds[i];
+        const bId = personIds[j];
+        const aParents = childToParents.get(aId) ?? new Set<string>();
+        const bParents = childToParents.get(bId) ?? new Set<string>();
+        if (aParents.size === 0 || bParents.size === 0) {
+          continue;
+        }
+
+        const areSiblings = (siblingAdjacency.get(aId) ?? new Set<string>()).has(bId);
+        if (areSiblings) {
+          continue;
+        }
+
+        const areDirectLineage = aParents.has(bId) || bParents.has(aId);
+        if (areDirectLineage) {
+          continue;
+        }
+
+        let isCousin = false;
+        for (const parentA of aParents) {
+          const parentASiblings = siblingAdjacency.get(parentA) ?? new Set<string>();
+          for (const parentB of bParents) {
+            if (parentASiblings.has(parentB)) {
+              isCousin = true;
+              break;
+            }
+          }
+          if (isCousin) {
+            break;
+          }
+        }
+
+        if (!isCousin) {
+          continue;
+        }
+
+        const key = [aId, bId].sort().join("|");
+        if (cousinPairKeys.has(key)) {
+          continue;
+        }
+
+        cousinPairKeys.add(key);
+        cousinPairs.push({ key, aId, bId });
+      }
+    }
+
+    const auntPairs: KinPair[] = [];
+    const unclePairs: KinPair[] = [];
+    const auntPairKeys = new Set<string>();
+    const unclePairKeys = new Set<string>();
+
+    personIds.forEach((personId) => {
+      const parentIds = childToParents.get(personId) ?? new Set<string>();
+      if (parentIds.size === 0) {
+        return;
+      }
+
+      parentIds.forEach((parentId) => {
+        const parentSiblings = siblingAdjacency.get(parentId) ?? new Set<string>();
+        parentSiblings.forEach((relativeId) => {
+          if (relativeId === personId) {
+            return;
+          }
+
+          const relative = peopleMap.get(relativeId);
+          const key = [personId, relativeId].sort().join("|");
+          if (relative?.sex === "female") {
+            if (auntPairKeys.has(key)) {
+              return;
+            }
+            auntPairKeys.add(key);
+            auntPairs.push({ key, aId: personId, bId: relativeId });
+            return;
+          }
+
+          if (relative?.sex === "male") {
+            if (unclePairKeys.has(key)) {
+              return;
+            }
+            unclePairKeys.add(key);
+            unclePairs.push({ key, aId: personId, bId: relativeId });
+          }
+        });
+      });
+    });
+
+    return { siblingPairs: { full, half }, cousinPairs, auntPairs, unclePairs };
+  }, [childrenLinks, people, peopleMap, unions]);
 
   const connectors = useMemo(() => {
     const elements: ReactElement[] = [];
@@ -381,7 +488,7 @@ export function TreeCanvas({
     });
 
     if (showSiblingConnections) {
-      siblingPairs.full.forEach((pair) => {
+      familyRelations.siblingPairs.full.forEach((pair) => {
         const a = centers[pair.aId];
         const b = centers[pair.bId];
         if (!a || !b) {
@@ -420,7 +527,7 @@ export function TreeCanvas({
     }
 
     if (showHalfSiblingConnections) {
-      siblingPairs.half.forEach((pair) => {
+      familyRelations.siblingPairs.half.forEach((pair) => {
         const a = centers[pair.aId];
         const b = centers[pair.bId];
         if (!a || !b) {
@@ -460,16 +567,89 @@ export function TreeCanvas({
       });
     }
 
+    if (showCousinConnections) {
+      familyRelations.cousinPairs.forEach((pair) => {
+        const a = centers[pair.aId];
+        const b = centers[pair.bId];
+        if (!a || !b) {
+          return;
+        }
+
+        elements.push(
+          <line
+            key={`cousin-${pair.key}`}
+            x1={a.x}
+            y1={a.y}
+            x2={b.x}
+            y2={b.y}
+            stroke="#0ea5e9"
+            strokeWidth={1.5}
+            strokeDasharray="3 6"
+            opacity={0.55}
+          />
+        );
+      });
+    }
+
+    if (showAuntConnections) {
+      familyRelations.auntPairs.forEach((pair) => {
+        const a = centers[pair.aId];
+        const b = centers[pair.bId];
+        if (!a || !b) {
+          return;
+        }
+
+        elements.push(
+          <line
+            key={`aunt-${pair.key}`}
+            x1={a.x}
+            y1={a.y}
+            x2={b.x}
+            y2={b.y}
+            stroke="#ec4899"
+            strokeWidth={1.5}
+            opacity={0.5}
+          />
+        );
+      });
+    }
+
+    if (showUncleConnections) {
+      familyRelations.unclePairs.forEach((pair) => {
+        const a = centers[pair.aId];
+        const b = centers[pair.bId];
+        if (!a || !b) {
+          return;
+        }
+
+        elements.push(
+          <line
+            key={`uncle-${pair.key}`}
+            x1={a.x}
+            y1={a.y}
+            x2={b.x}
+            y2={b.y}
+            stroke="#6366f1"
+            strokeWidth={1.5}
+            opacity={0.5}
+          />
+        );
+      });
+    }
+
     return elements;
   }, [
     centers,
     childrenLinks,
     connectionStyle,
+    familyRelations,
+    showAuntConnections,
     showChildConnections,
+    showCousinConnections,
     showHalfSiblingConnections,
     showPartnerConnections,
     showSiblingConnections,
-    siblingPairs,
+    showUncleConnections,
     unions
   ]);
 
@@ -548,6 +728,30 @@ export function TreeCanvas({
               />
               Half-sibling lines
             </label>
+            <label className="flex items-center gap-1 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={showCousinConnections}
+                onChange={(event) => setShowCousinConnections(event.target.checked)}
+              />
+              Cousin lines
+            </label>
+            <label className="flex items-center gap-1 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={showAuntConnections}
+                onChange={(event) => setShowAuntConnections(event.target.checked)}
+              />
+              Aunt lines
+            </label>
+            <label className="flex items-center gap-1 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={showUncleConnections}
+                onChange={(event) => setShowUncleConnections(event.target.checked)}
+              />
+              Uncle lines
+            </label>
             <select
               className="rounded-md border border-slate-300 px-2 py-1 text-xs"
               value={connectionStyle}
@@ -598,6 +802,18 @@ export function TreeCanvas({
             <span className="inline-flex items-center gap-2">
               <span className="inline-block w-8 border-t-2 border-dashed border-pink-600" />
               Half-sibling connection
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-dashed border-sky-500" />
+              Cousin connection
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-pink-500" />
+              Aunt connection
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-indigo-500" />
+              Uncle connection
             </span>
           </div>
           <div
