@@ -186,6 +186,9 @@ export function Workspace() {
     return map;
   }, [state?.people]);
 
+  const allLeftPanelsCollapsed =
+    editorCollapsed && activityCollapsed && (!state?.isAdmin || adminCollapsed);
+
   if (!state) {
     return (
       <main className="mx-auto max-w-md p-6">
@@ -271,8 +274,12 @@ export function Workspace() {
 
       {error && <p className="mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)]">
-        <div className="order-2 space-y-4 lg:order-1">
+      <section
+        className={`grid gap-4 ${
+          allLeftPanelsCollapsed ? "grid-cols-1" : "lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)]"
+        }`}
+      >
+        {!allLeftPanelsCollapsed && <div className="order-2 space-y-4 lg:order-1">
           {!editorCollapsed && (
             <EditorPanel
               treeId={treeId}
@@ -308,9 +315,9 @@ export function Workspace() {
               onRefresh={refresh}
             />
           )}
-        </div>
+        </div>}
 
-        <div className="order-1 lg:order-2">
+        <div className={allLeftPanelsCollapsed ? "order-1" : "order-1 lg:order-2"}>
           <TreeCanvas
             people={state.people}
             unions={state.unions}
