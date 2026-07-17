@@ -10,6 +10,8 @@ interface TreeCanvasProps {
   childrenLinks: UnionChildLink[];
   nodePositions?: NodePosition[];
   canEdit: boolean;
+  selectedPersonId?: string;
+  onSelectPerson?: (personId: string) => void;
   onPositionCommit: (personId: string, x: number, y: number) => Promise<void>;
 }
 
@@ -62,6 +64,8 @@ export function TreeCanvas({
   childrenLinks,
   nodePositions,
   canEdit,
+  selectedPersonId,
+  onSelectPerson,
   onPositionCommit
 }: TreeCanvasProps) {
   const peopleMap = new Map(people.map((person) => [person.id, person]));
@@ -468,6 +472,7 @@ export function TreeCanvas({
               <button
                 key={person.id}
                 type="button"
+                onClick={() => onSelectPerson?.(person.id)}
                 onPointerDown={(event) => {
                   if (!canEdit || !boardRef.current) {
                     return;
@@ -477,7 +482,11 @@ export function TreeCanvas({
                   const offsetY = event.clientY - bounds.top - position.y;
                   setDragState({ personId: person.id, offsetX, offsetY });
                 }}
-                className="absolute z-10 rounded-full border border-teal-300 bg-teal-100 px-3 py-2 text-sm font-semibold text-teal-900 shadow-sm"
+                className={`absolute z-10 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm ${
+                  selectedPersonId === person.id
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-teal-300 bg-teal-100 text-teal-900"
+                }`}
                 style={{ left: position.x, top: position.y, cursor: canEdit ? "grab" : "default" }}
               >
                 {person.first_name} {person.last_name}

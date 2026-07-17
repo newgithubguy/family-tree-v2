@@ -338,6 +338,41 @@ export function createUnion(input: {
   return created;
 }
 
+export function updateUnion(input: {
+  id: string;
+  treeId: string;
+  actorUserId: string;
+  partnerAPersonId: string;
+  partnerBPersonId: string;
+  unionType: "married" | "unmarried" | "divorced";
+}) {
+  const db = getDb();
+  const union = db.data.unions.find((record) => record.id === input.id && record.tree_id === input.treeId);
+  if (!union) {
+    return null;
+  }
+
+  const current = { ...union };
+  union.partner_a_person_id = input.partnerAPersonId;
+  union.partner_b_person_id = input.partnerBPersonId;
+  union.union_type = input.unionType;
+  union.updated_at = currentTimestamp();
+
+  db.save();
+
+  logActivity({
+    treeId: input.treeId,
+    actorUserId: input.actorUserId,
+    action: "UPDATE",
+    targetEntity: "unions",
+    targetId: input.id,
+    oldValues: current,
+    newValues: union
+  });
+
+  return union;
+}
+
 export function deleteUnion(input: { id: string; treeId: string; actorUserId: string }) {
   const db = getDb();
   const union = db.data.unions.find((u) => u.id === input.id && u.tree_id === input.treeId);
@@ -412,6 +447,38 @@ export function createChildLink(input: {
   });
 
   return created;
+}
+
+export function updateChildLink(input: {
+  id: string;
+  treeId: string;
+  actorUserId: string;
+  unionId: string;
+  childPersonId: string;
+}) {
+  const db = getDb();
+  const link = db.data.union_children.find((record) => record.id === input.id && record.tree_id === input.treeId);
+  if (!link) {
+    return null;
+  }
+
+  const current = { ...link };
+  link.union_id = input.unionId;
+  link.child_person_id = input.childPersonId;
+
+  db.save();
+
+  logActivity({
+    treeId: input.treeId,
+    actorUserId: input.actorUserId,
+    action: "UPDATE",
+    targetEntity: "union_children",
+    targetId: input.id,
+    oldValues: current,
+    newValues: link
+  });
+
+  return link;
 }
 
 export function deleteChildLink(input: { id: string; treeId: string; actorUserId: string }) {

@@ -43,6 +43,7 @@ export function Workspace() {
   const [password, setPassword] = useState("admin123");
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
   const [activityCollapsed, setActivityCollapsed] = useState(false);
+  const [selectedPersonId, setSelectedPersonId] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
 
   async function login() {
@@ -156,6 +157,17 @@ export function Workspace() {
     };
   }, [state?.me?.id]);
 
+  useEffect(() => {
+    if (!selectedPersonId) {
+      return;
+    }
+
+    const personStillExists = (state?.people ?? []).some((person) => person.id === selectedPersonId);
+    if (!personStillExists) {
+      setSelectedPersonId("");
+    }
+  }, [selectedPersonId, state?.people]);
+
   const userMap = useMemo(() => {
     const map: Record<string, { display_name: string }> = {};
     (state?.users ?? []).forEach((user) => {
@@ -254,6 +266,8 @@ export function Workspace() {
           childrenLinks={state.childrenLinks}
           nodePositions={state.nodePositions ?? []}
           canEdit={state.canEdit}
+          selectedPersonId={selectedPersonId}
+          onSelectPerson={setSelectedPersonId}
           onPositionCommit={onPositionCommit}
         />
         {!activityCollapsed && (
@@ -270,6 +284,9 @@ export function Workspace() {
           canEdit={state.canEdit}
           people={state.people}
           unions={state.unions}
+          childrenLinks={state.childrenLinks}
+          selectedPersonId={selectedPersonId}
+          onSelectedPersonChange={setSelectedPersonId}
           onRefresh={refresh}
         />
       </section>
