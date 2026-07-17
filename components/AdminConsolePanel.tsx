@@ -306,6 +306,7 @@ export function AdminConsolePanel({
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-lg border border-slate-200 p-3">
           <h3 className="mb-2 text-sm font-semibold text-slate-800">Create User</h3>
+          <p className="mb-2 text-xs text-slate-500">Total users: {users.length}</p>
           <div className="space-y-2">
             <input
               className="w-full rounded-md border px-3 py-2 text-sm"
@@ -348,6 +349,7 @@ export function AdminConsolePanel({
 
         <div className="rounded-lg border border-slate-200 p-3">
           <h3 className="mb-2 text-sm font-semibold text-slate-800">Add Existing User to Tree</h3>
+          <p className="mb-2 text-xs text-slate-500">Not in tree: {eligibleUsers.length}</p>
           <div className="space-y-2">
             <select
               className="w-full rounded-md border px-3 py-2 text-sm"
@@ -460,7 +462,26 @@ export function AdminConsolePanel({
       </div>
 
       <div className="mt-4 rounded-lg border border-slate-200 p-3">
+        <h3 className="mb-2 text-sm font-semibold text-slate-800">All Users</h3>
+        <div className="max-h-56 space-y-2 overflow-auto pr-1">
+          {users.map((user) => {
+            const member = memberByUserId[user.id];
+            return (
+              <div key={user.id} className="rounded-md border border-slate-200 p-2">
+                <div className="text-sm font-semibold text-slate-800">{user.display_name}</div>
+                <div className="text-xs text-slate-500">{user.email}</div>
+                <div className="mt-1 text-xs text-slate-600">
+                  {member ? `In tree as ${member.role}` : "Not in tree"}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-slate-200 p-3">
         <h3 className="mb-2 text-sm font-semibold text-slate-800">Tree Members</h3>
+        <p className="mb-2 text-xs text-slate-500">Total members: {members.length}</p>
         <div className="space-y-2">
           {members.map((member) => {
             const isOwner = ownerUserId === member.user_id;
