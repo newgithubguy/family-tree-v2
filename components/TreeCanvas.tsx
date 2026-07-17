@@ -15,11 +15,20 @@ interface TreeCanvasProps {
   onPositionCommit: (personId: string, x: number, y: number) => Promise<void>;
 }
 
-type DragState = {
-  personId: string;
-  offsetX: number;
-  offsetY: number;
-} | null;
+type DragState =
+  | {
+      mode: "person";
+      personId: string;
+      offsetX: number;
+      offsetY: number;
+    }
+  | {
+      mode: "all";
+      anchorX: number;
+      anchorY: number;
+      startPositions: Record<string, { x: number; y: number }>;
+    }
+  | null;
 
 type ConnectionStyle = "curved" | "straight";
 
@@ -33,6 +42,8 @@ const BOARD_WIDTH = 900;
 const BOARD_HEIGHT = 380;
 const NODE_WIDTH = 120;
 const NODE_HEIGHT = 44;
+const MIN_ZOOM = 0.6;
+const MAX_ZOOM = 2;
 
 function strokeColorForUnion(unionType: UnionRecord["union_type"]) {
   if (unionType === "married") {
@@ -95,10 +106,13 @@ export function TreeCanvas({
   const [showSiblingConnections, setShowSiblingConnections] = useState(true);
   const [showHalfSiblingConnections, setShowHalfSiblingConnections] = useState(true);
   const [connectionStyle, setConnectionStyle] = useState<ConnectionStyle>("curved");
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [moveAllMode, setMoveAllMode] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [viewportWidth, setViewportWidth] = useState(BOARD_WIDTH);
 
-  const boardScale = viewportWidth / BOARD_WIDTH;
+  const fitScale = viewportWidth / BOARD_WIDTH;
+  const boardScale = fitScale * zoomLevel;
   const scaledBoardHeight = BOARD_HEIGHT * boardScale;
 
   const centers = useMemo(() => {
@@ -145,26 +159,58 @@ export function TreeCanvas({
         return;
       }
       const bounds = viewport.getBoundingClientRect();
-      const logicalX = (event.clientX - bounds.left) / boardScale;
-      const logicalY = (event.clientY - bounds.top) / boardScale;
-      const x = clamp(logicalX - currentDrag.offsetX, 8, BOARD_WIDTH - 120);
-      const y = clamp(logicalY - currentDrag.offsetY, 8, BOARD_HEIGHT - 52);
+      const logicalX = (event.clientX - bounds.left + viewport.scrollLeft) / boardScale;
+      const logicalY = (event.clientY - bounds.top + viewport.scrollTop) / boardScale;
 
-      setDragPositions((current) => ({
-        ...current,
-        [currentDrag.personId]: { x, y }
-      }));
+      if (currentDrag.mode === "person") {
+        const x = clamp(logicalX - currentDrag.offsetX, 8, BOARD_WIDTH - 120);
+        const y = clamp(logicalY - currentDrag.offsetY, 8, BOARD_HEIGHT - 52);
+
+        setDragPositions((current) => ({
+          ...current,
+          [currentDrag.personId]: { x, y }
+        }));
+        return;
+      }
+
+      const deltaX = logicalX - currentDrag.anchorX;
+      const deltaY = logicalY - currentDrag.anchorY;
+      const next: Record<string, { x: number; y: number }> = {};
+      Object.entries(currentDrag.startPositions).forEach(([personId, start]) => {
+        next[personId] = {
+          x: clamp(start.x + deltaX, 8, BOARD_WIDTH - 120),
+          y: clamp(start.y + deltaY, 8, BOARD_HEIGHT - 52)
+        };
+      });
+      setDragPositions(next);
     }
 
     async function onUp() {
-      const latest = positions[currentDrag.personId];
-      if (latest) {
-        await onPositionCommit(currentDrag.personId, Math.round(latest.x), Math.round(latest.y));
+      if (currentDrag.mode === "person") {
+        const latest = positions[currentDrag.personId];
+        if (latest) {
+          await onPositionCommit(currentDrag.personId, Math.round(latest.x), Math.round(latest.y));
+        }
+      } else {
+        await Promise.all(
+          people.map(async (person) => {
+            const latest = positions[person.id];
+            if (!latest) {
+              return;
+            }
+            await onPositionCommit(person.id, Math.round(latest.x), Math.round(latest.y));
+          })
+        );
       }
+
       setDragPositions((current) => {
         const next = { ...current };
-        delete next[currentDrag.personId];
-        return next;
+        if (currentDrag.mode === "person") {
+          delete next[currentDrag.personId];
+          return next;
+        }
+
+        return {};
       });
       setDragState(null);
     }
@@ -175,7 +221,7 @@ export function TreeCanvas({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [boardScale, dragState, onPositionCommit, positions]);
+  }, [boardScale, dragState, onPositionCommit, people, positions]);
 
   const siblingPairs = useMemo(() => {
     const unionById = new Map(unions.map((union) => [union.id, union]));
@@ -429,6 +475,41 @@ export function TreeCanvas({
       <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-3">
         <div className="mb-2 flex flex-wrap items-center gap-3">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Draggable People Board</div>
+          <div className="flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700">
+            <button
+              type="button"
+              className="rounded border border-slate-300 px-2 py-0.5"
+              onClick={() => setZoomLevel((current) => clamp(Number((current - 0.1).toFixed(2)), MIN_ZOOM, MAX_ZOOM))}
+            >
+              -
+            </button>
+            <span className="w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
+            <button
+              type="button"
+              className="rounded border border-slate-300 px-2 py-0.5"
+              onClick={() => setZoomLevel((current) => clamp(Number((current + 0.1).toFixed(2)), MIN_ZOOM, MAX_ZOOM))}
+            >
+              +
+            </button>
+            <button
+              type="button"
+              className="rounded border border-slate-300 px-2 py-0.5"
+              onClick={() => setZoomLevel(1)}
+            >
+              Reset
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMoveAllMode((current) => !current)}
+            className={`rounded-md border px-2 py-1 text-xs font-semibold ${
+              moveAllMode
+                ? "border-teal-700 bg-teal-700 text-white"
+                : "border-slate-300 bg-white text-slate-700"
+            }`}
+          >
+            {moveAllMode ? "Move All Enabled" : "Move All Objects"}
+          </button>
           <label className="flex items-center gap-1 text-xs text-slate-600">
             <input
               type="checkbox"
@@ -506,8 +587,27 @@ export function TreeCanvas({
         </div>
         <div
           ref={viewportRef}
-          className="relative w-full overflow-hidden rounded-lg border border-slate-300 bg-white"
+          className="relative w-full overflow-auto rounded-lg border border-slate-300 bg-white"
           style={{ height: scaledBoardHeight }}
+          onPointerDown={(event) => {
+            if (!canEdit || !moveAllMode || !viewportRef.current) {
+              return;
+            }
+
+            if (event.target !== event.currentTarget) {
+              return;
+            }
+
+            const bounds = viewportRef.current.getBoundingClientRect();
+            const logicalX = (event.clientX - bounds.left + viewportRef.current.scrollLeft) / boardScale;
+            const logicalY = (event.clientY - bounds.top + viewportRef.current.scrollTop) / boardScale;
+            setDragState({
+              mode: "all",
+              anchorX: logicalX,
+              anchorY: logicalY,
+              startPositions: positions
+            });
+          }}
         >
           <div
             className="absolute left-0 top-0 origin-top-left"
@@ -527,19 +627,33 @@ export function TreeCanvas({
                     if (!canEdit || !viewportRef.current) {
                       return;
                     }
+
+                    event.stopPropagation();
+
                     const bounds = viewportRef.current.getBoundingClientRect();
-                    const logicalX = (event.clientX - bounds.left) / boardScale;
-                    const logicalY = (event.clientY - bounds.top) / boardScale;
+                    const logicalX = (event.clientX - bounds.left + viewportRef.current.scrollLeft) / boardScale;
+                    const logicalY = (event.clientY - bounds.top + viewportRef.current.scrollTop) / boardScale;
+
+                    if (moveAllMode) {
+                      setDragState({
+                        mode: "all",
+                        anchorX: logicalX,
+                        anchorY: logicalY,
+                        startPositions: positions
+                      });
+                      return;
+                    }
+
                     const offsetX = logicalX - position.x;
                     const offsetY = logicalY - position.y;
-                    setDragState({ personId: person.id, offsetX, offsetY });
+                    setDragState({ mode: "person", personId: person.id, offsetX, offsetY });
                   }}
                   className={`absolute z-10 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm ${
                     selectedPersonId === person.id
                       ? "border-slate-900 bg-slate-900 text-white"
                       : "border-teal-300 bg-teal-100 text-teal-900"
                   }`}
-                  style={{ left: position.x, top: position.y, cursor: canEdit ? "grab" : "default" }}
+                  style={{ left: position.x, top: position.y, cursor: canEdit ? (moveAllMode ? "move" : "grab") : "default" }}
                 >
                   {person.first_name} {person.last_name}
                 </button>
