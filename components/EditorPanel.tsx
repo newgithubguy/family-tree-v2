@@ -12,6 +12,8 @@ interface EditorPanelProps {
   childrenLinks: UnionChildLink[];
   selectedPersonId: string;
   onSelectedPersonChange: (personId: string) => void;
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
   onRefresh: () => Promise<void>;
 }
 
@@ -23,9 +25,10 @@ export function EditorPanel({
   childrenLinks,
   selectedPersonId,
   onSelectedPersonChange,
+  collapsed,
+  onCollapsedChange,
   onRefresh
 }: EditorPanelProps) {
-  const [collapsed, setCollapsed] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [sex, setSex] = useState<Person["sex"]>("unknown");
@@ -335,16 +338,16 @@ export function EditorPanel({
   }
 
   return (
-    <div className="panel h-full min-h-[520px] overflow-auto p-4">
-      <div className="mb-4 flex items-center justify-between gap-2">
+    <div className={`panel h-full overflow-auto p-4 ${collapsed ? "min-h-0" : "min-h-[520px]"}`}>
+      <div className={`flex items-center justify-between gap-2 ${collapsed ? "mb-0" : "mb-4"}`}>
         <div className="flex items-center gap-2">
           <PencilLine className="h-5 w-5 text-teal-700" />
-          <h2 className="text-lg font-semibold text-slate-800">Edit Panel</h2>
+          {!collapsed && <h2 className="text-lg font-semibold text-slate-800">Edit Panel</h2>}
         </div>
         <button
           type="button"
           className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-          onClick={() => setCollapsed((current) => !current)}
+          onClick={() => onCollapsedChange(!collapsed)}
         >
           {collapsed ? "Expand" : "Collapse"}
         </button>

@@ -43,6 +43,7 @@ export function Workspace() {
   const [password, setPassword] = useState("admin123");
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
   const [activityCollapsed, setActivityCollapsed] = useState(false);
+  const [editorCollapsed, setEditorCollapsed] = useState(false);
   const [selectedPersonId, setSelectedPersonId] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -255,9 +256,13 @@ export function Workspace() {
 
       <section
         className={`grid gap-4 ${
-          activityCollapsed
-            ? "lg:grid-cols-[minmax(760px,1fr)_minmax(360px,420px)]"
-            : "lg:grid-cols-[minmax(640px,1fr)_420px_360px]"
+          activityCollapsed && editorCollapsed
+            ? "lg:grid-cols-[minmax(760px,1fr)_88px]"
+            : activityCollapsed
+              ? "lg:grid-cols-[minmax(760px,1fr)_minmax(300px,360px)]"
+              : editorCollapsed
+                ? "lg:grid-cols-[minmax(640px,1fr)_420px_88px]"
+                : "lg:grid-cols-[minmax(640px,1fr)_420px_360px]"
         }`}
       >
         <TreeCanvas
@@ -287,6 +292,8 @@ export function Workspace() {
           childrenLinks={state.childrenLinks}
           selectedPersonId={selectedPersonId}
           onSelectedPersonChange={setSelectedPersonId}
+          collapsed={editorCollapsed}
+          onCollapsedChange={setEditorCollapsed}
           onRefresh={refresh}
         />
       </section>
