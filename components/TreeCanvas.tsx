@@ -38,7 +38,7 @@ type SiblingPair = {
   bId: string;
 };
 
-const BOARD_WIDTH = 900;
+const BASE_BOARD_WIDTH = 900;
 const BASE_BOARD_HEIGHT = 380;
 const NODE_WIDTH = 120;
 const NODE_HEIGHT = 44;
@@ -110,12 +110,13 @@ export function TreeCanvas({
   const [zoomLevel, setZoomLevel] = useState(1);
   const [moveAllMode, setMoveAllMode] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const [viewportWidth, setViewportWidth] = useState(BOARD_WIDTH);
+  const [viewportWidth, setViewportWidth] = useState(BASE_BOARD_WIDTH);
   const [viewportHeight, setViewportHeight] = useState(BASE_BOARD_HEIGHT);
 
-  const fitScale = viewportWidth / BOARD_WIDTH;
-  const boardScale = fitScale * zoomLevel;
+  const boardScale = zoomLevel;
+  const boardWidth = Math.max(BASE_BOARD_WIDTH, viewportWidth / Math.max(boardScale, 0.001));
   const boardHeight = Math.max(BASE_BOARD_HEIGHT, viewportHeight / Math.max(boardScale, 0.001));
+  const scaledBoardWidth = boardWidth * boardScale;
   const scaledBoardHeight = boardHeight * boardScale;
 
   const centers = useMemo(() => {
@@ -136,7 +137,7 @@ export function TreeCanvas({
     }
 
     const updateViewportWidth = () => {
-      setViewportWidth(viewport.clientWidth || BOARD_WIDTH);
+      setViewportWidth(viewport.clientWidth || BASE_BOARD_WIDTH);
       setViewportHeight(viewport.clientHeight || BASE_BOARD_HEIGHT);
     };
 
@@ -167,7 +168,7 @@ export function TreeCanvas({
       const logicalY = (event.clientY - bounds.top + viewport.scrollTop) / boardScale;
 
       if (currentDrag.mode === "person") {
-        const x = clamp(logicalX - currentDrag.offsetX, 8, BOARD_WIDTH - 120);
+        const x = clamp(logicalX - currentDrag.offsetX, 8, boardWidth - 120);
         const y = clamp(logicalY - currentDrag.offsetY, 8, boardHeight - 52);
 
         setDragPositions((current) => ({
@@ -182,7 +183,7 @@ export function TreeCanvas({
       const next: Record<string, { x: number; y: number }> = {};
       Object.entries(currentDrag.startPositions).forEach(([personId, start]) => {
         next[personId] = {
-          x: clamp(start.x + deltaX, 8, BOARD_WIDTH - 120),
+          x: clamp(start.x + deltaX, 8, boardWidth - 120),
           y: clamp(start.y + deltaY, 8, boardHeight - 52)
         };
       });
@@ -225,7 +226,7 @@ export function TreeCanvas({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [boardHeight, boardScale, dragState, onPositionCommit, people, positions]);
+  }, [boardHeight, boardScale, boardWidth, dragState, onPositionCommit, people, positions]);
 
   const siblingPairs = useMemo(() => {
     const unionById = new Map(unions.map((union) => [union.id, union]));
@@ -624,65 +625,70 @@ export function TreeCanvas({
             }}
           >
             <div
-              className="absolute left-0 top-0 origin-top-left"
-              style={{ width: BOARD_WIDTH, height: boardHeight, transform: `scale(${boardScale})` }}
+              className="relative"
+              style={{ width: scaledBoardWidth, height: scaledBoardHeight }}
             >
-              <svg className="pointer-events-none absolute inset-0 z-0" width={BOARD_WIDTH} height={boardHeight}>
-                {connectors}
-              </svg>
-              {people.map((person) => {
-                const position = positions[person.id] ?? { x: 20, y: 20 };
-                const unselectedBubbleClass =
-                  person.sex === "female"
-                    ? "border-pink-300 bg-pink-100 text-pink-900"
-                    : person.sex === "male"
-                      ? "border-sky-300 bg-sky-100 text-sky-900"
-                      : "border-teal-300 bg-teal-100 text-teal-900";
-                const selectedBubbleClass =
-                  person.sex === "female"
-                    ? "border-pink-500 bg-pink-200 text-pink-950"
-                    : person.sex === "male"
-                      ? "border-sky-500 bg-sky-200 text-sky-950"
-                      : "border-slate-900 bg-slate-900 text-white";
-                return (
-                  <button
-                    key={person.id}
-                    type="button"
-                    onClick={() => onSelectPerson?.(person.id)}
-                    onPointerDown={(event) => {
-                      if (!canEdit || !viewportRef.current) {
-                        return;
-                      }
+              <div
+                className="absolute left-0 top-0 origin-top-left"
+                style={{ width: boardWidth, height: boardHeight, transform: `scale(${boardScale})` }}
+              >
+                <svg className="pointer-events-none absolute inset-0 z-0" width={boardWidth} height={boardHeight}>
+                  {connectors}
+                </svg>
+                {people.map((person) => {
+                  const position = positions[person.id] ?? { x: 20, y: 20 };
+                  const unselectedBubbleClass =
+                    person.sex === "female"
+                      ? "border-pink-300 bg-pink-100 text-pink-900"
+                      : person.sex === "male"
+                        ? "border-sky-300 bg-sky-100 text-sky-900"
+                        : "border-teal-300 bg-teal-100 text-teal-900";
+                  const selectedBubbleClass =
+                    person.sex === "female"
+                      ? "border-pink-500 bg-pink-200 text-pink-950"
+                      : person.sex === "male"
+                        ? "border-sky-500 bg-sky-200 text-sky-950"
+                        : "border-slate-900 bg-slate-900 text-white";
+                  return (
+                    <button
+                      key={person.id}
+                      type="button"
+                      onClick={() => onSelectPerson?.(person.id)}
+                      onPointerDown={(event) => {
+                        if (!canEdit || !viewportRef.current) {
+                          return;
+                        }
 
-                      event.stopPropagation();
+                        event.stopPropagation();
 
-                      const bounds = viewportRef.current.getBoundingClientRect();
-                      const logicalX = (event.clientX - bounds.left + viewportRef.current.scrollLeft) / boardScale;
-                      const logicalY = (event.clientY - bounds.top + viewportRef.current.scrollTop) / boardScale;
+                        const bounds = viewportRef.current.getBoundingClientRect();
+                        const logicalX = (event.clientX - bounds.left + viewportRef.current.scrollLeft) / boardScale;
+                        const logicalY = (event.clientY - bounds.top + viewportRef.current.scrollTop) / boardScale;
 
-                      if (moveAllMode) {
-                        setDragState({
-                          mode: "all",
-                          anchorX: logicalX,
-                          anchorY: logicalY,
-                          startPositions: positions
-                        });
-                        return;
-                      }
+                        if (moveAllMode) {
+                          setDragState({
+                            mode: "all",
+                            anchorX: logicalX,
+                            anchorY: logicalY,
+                            startPositions: positions
+                          });
+                          return;
+                        }
 
-                      const offsetX = logicalX - position.x;
-                      const offsetY = logicalY - position.y;
-                      setDragState({ mode: "person", personId: person.id, offsetX, offsetY });
-                    }}
-                    className={`absolute z-10 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm ${
-                      selectedPersonId === person.id ? selectedBubbleClass : unselectedBubbleClass
-                    }`}
-                    style={{ left: position.x, top: position.y, cursor: canEdit ? (moveAllMode ? "move" : "grab") : "default" }}
-                  >
-                    {person.first_name} {person.last_name}
-                  </button>
-                );
-              })}
+                        const offsetX = logicalX - position.x;
+                        const offsetY = logicalY - position.y;
+                        setDragState({ mode: "person", personId: person.id, offsetX, offsetY });
+                      }}
+                      className={`absolute z-10 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm ${
+                        selectedPersonId === person.id ? selectedBubbleClass : unselectedBubbleClass
+                      }`}
+                      style={{ left: position.x, top: position.y, cursor: canEdit ? (moveAllMode ? "move" : "grab") : "default" }}
+                    >
+                      {person.first_name} {person.last_name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
