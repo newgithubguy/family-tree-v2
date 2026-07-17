@@ -298,13 +298,12 @@ export function Workspace() {
             />
           )}
 
-          {state.isAdmin && (
+          {state.isAdmin && !adminCollapsed && (
             <AdminConsolePanel
               treeId={treeId}
               users={state.users}
               members={state.members}
               ownerUserId={state.tree.owner_user_id}
-              collapsed={adminCollapsed}
               onCollapsedChange={setAdminCollapsed}
               onRefresh={refresh}
             />

@@ -472,249 +472,254 @@ export function TreeCanvas({
     <div className="panel h-full min-h-[620px] overflow-auto p-6 canvas-grid">
       <h2 className="mb-4 text-lg font-semibold text-slate-800">Family Canvas</h2>
 
-      <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-3">
-        <div className="mb-2 flex flex-wrap items-center gap-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Draggable People Board</div>
-          <div className="flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="mb-2 flex flex-wrap items-center gap-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Draggable People Board</div>
+            <div className="flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700">
+              <button
+                type="button"
+                className="rounded border border-slate-300 px-2 py-0.5"
+                onClick={() => setZoomLevel((current) => clamp(Number((current - 0.1).toFixed(2)), MIN_ZOOM, MAX_ZOOM))}
+              >
+                -
+              </button>
+              <span className="w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
+              <button
+                type="button"
+                className="rounded border border-slate-300 px-2 py-0.5"
+                onClick={() => setZoomLevel((current) => clamp(Number((current + 0.1).toFixed(2)), MIN_ZOOM, MAX_ZOOM))}
+              >
+                +
+              </button>
+              <button
+                type="button"
+                className="rounded border border-slate-300 px-2 py-0.5"
+                onClick={() => setZoomLevel(1)}
+              >
+                Reset
+              </button>
+            </div>
             <button
               type="button"
-              className="rounded border border-slate-300 px-2 py-0.5"
-              onClick={() => setZoomLevel((current) => clamp(Number((current - 0.1).toFixed(2)), MIN_ZOOM, MAX_ZOOM))}
+              onClick={() => setMoveAllMode((current) => !current)}
+              className={`rounded-md border px-2 py-1 text-xs font-semibold ${
+                moveAllMode
+                  ? "border-teal-700 bg-teal-700 text-white"
+                  : "border-slate-300 bg-white text-slate-700"
+              }`}
             >
-              -
+              {moveAllMode ? "Move All Enabled" : "Move All Objects"}
             </button>
-            <span className="w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
-            <button
-              type="button"
-              className="rounded border border-slate-300 px-2 py-0.5"
-              onClick={() => setZoomLevel((current) => clamp(Number((current + 0.1).toFixed(2)), MIN_ZOOM, MAX_ZOOM))}
+            <label className="flex items-center gap-1 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={showPartnerConnections}
+                onChange={(event) => setShowPartnerConnections(event.target.checked)}
+              />
+              Partner lines
+            </label>
+            <label className="flex items-center gap-1 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={showChildConnections}
+                onChange={(event) => setShowChildConnections(event.target.checked)}
+              />
+              Parent-child lines
+            </label>
+            <label className="flex items-center gap-1 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={showSiblingConnections}
+                onChange={(event) => setShowSiblingConnections(event.target.checked)}
+              />
+              Sibling lines
+            </label>
+            <label className="flex items-center gap-1 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={showHalfSiblingConnections}
+                onChange={(event) => setShowHalfSiblingConnections(event.target.checked)}
+              />
+              Half-sibling lines
+            </label>
+            <select
+              className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+              value={connectionStyle}
+              onChange={(event) => setConnectionStyle(event.target.value as ConnectionStyle)}
             >
-              +
-            </button>
-            <button
-              type="button"
-              className="rounded border border-slate-300 px-2 py-0.5"
-              onClick={() => setZoomLevel(1)}
-            >
-              Reset
-            </button>
+              <option value="curved">Curved lines</option>
+              <option value="straight">Straight lines</option>
+            </select>
           </div>
-          <button
-            type="button"
-            onClick={() => setMoveAllMode((current) => !current)}
-            className={`rounded-md border px-2 py-1 text-xs font-semibold ${
-              moveAllMode
-                ? "border-teal-700 bg-teal-700 text-white"
-                : "border-slate-300 bg-white text-slate-700"
-            }`}
-          >
-            {moveAllMode ? "Move All Enabled" : "Move All Objects"}
-          </button>
-          <label className="flex items-center gap-1 text-xs text-slate-600">
-            <input
-              type="checkbox"
-              checked={showPartnerConnections}
-              onChange={(event) => setShowPartnerConnections(event.target.checked)}
-            />
-            Partner lines
-          </label>
-          <label className="flex items-center gap-1 text-xs text-slate-600">
-            <input
-              type="checkbox"
-              checked={showChildConnections}
-              onChange={(event) => setShowChildConnections(event.target.checked)}
-            />
-            Parent-child lines
-          </label>
-          <label className="flex items-center gap-1 text-xs text-slate-600">
-            <input
-              type="checkbox"
-              checked={showSiblingConnections}
-              onChange={(event) => setShowSiblingConnections(event.target.checked)}
-            />
-            Sibling lines
-          </label>
-          <label className="flex items-center gap-1 text-xs text-slate-600">
-            <input
-              type="checkbox"
-              checked={showHalfSiblingConnections}
-              onChange={(event) => setShowHalfSiblingConnections(event.target.checked)}
-            />
-            Half-sibling lines
-          </label>
-          <select
-            className="rounded-md border border-slate-300 px-2 py-1 text-xs"
-            value={connectionStyle}
-            onChange={(event) => setConnectionStyle(event.target.value as ConnectionStyle)}
-          >
-            <option value="curved">Curved lines</option>
-            <option value="straight">Straight lines</option>
-          </select>
-        </div>
-        <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-slate-600">
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block w-8 border-t-2 border-teal-700" />
-            Married union
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block w-8 border-t-2 border-sky-700 border-dashed" />
-            Unmarried union
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block w-8 border-t-2 border-amber-700" />
-            Divorced union
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block w-8 border-t-2 border-violet-600" />
-            Child link (married)
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block w-8 border-t-2 border-blue-600" />
-            Child link (unmarried)
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block w-8 border-t-2 border-red-600" />
-            Child link (divorced)
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block w-8 border-t-2 border-emerald-600" />
-            Sibling connection
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block w-8 border-t-2 border-dashed border-pink-600" />
-            Half-sibling connection
-          </span>
-        </div>
-        <div
-          ref={viewportRef}
-          className="relative w-full overflow-auto rounded-lg border border-slate-300 bg-white"
-          style={{ height: scaledBoardHeight }}
-          onPointerDown={(event) => {
-            if (!canEdit || !moveAllMode || !viewportRef.current) {
-              return;
-            }
-
-            if (event.target !== event.currentTarget) {
-              return;
-            }
-
-            const bounds = viewportRef.current.getBoundingClientRect();
-            const logicalX = (event.clientX - bounds.left + viewportRef.current.scrollLeft) / boardScale;
-            const logicalY = (event.clientY - bounds.top + viewportRef.current.scrollTop) / boardScale;
-            setDragState({
-              mode: "all",
-              anchorX: logicalX,
-              anchorY: logicalY,
-              startPositions: positions
-            });
-          }}
-        >
+          <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-slate-600">
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-teal-700" />
+              Married union
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-sky-700 border-dashed" />
+              Unmarried union
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-amber-700" />
+              Divorced union
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-violet-600" />
+              Child link (married)
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-blue-600" />
+              Child link (unmarried)
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-red-600" />
+              Child link (divorced)
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-emerald-600" />
+              Sibling connection
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-dashed border-pink-600" />
+              Half-sibling connection
+            </span>
+          </div>
           <div
-            className="absolute left-0 top-0 origin-top-left"
-            style={{ width: BOARD_WIDTH, height: BOARD_HEIGHT, transform: `scale(${boardScale})` }}
+            ref={viewportRef}
+            className="relative w-full overflow-auto rounded-lg border border-slate-300 bg-white"
+            style={{ height: scaledBoardHeight }}
+            onPointerDown={(event) => {
+              if (!canEdit || !moveAllMode || !viewportRef.current) {
+                return;
+              }
+
+              if (event.target !== event.currentTarget) {
+                return;
+              }
+
+              const bounds = viewportRef.current.getBoundingClientRect();
+              const logicalX = (event.clientX - bounds.left + viewportRef.current.scrollLeft) / boardScale;
+              const logicalY = (event.clientY - bounds.top + viewportRef.current.scrollTop) / boardScale;
+              setDragState({
+                mode: "all",
+                anchorX: logicalX,
+                anchorY: logicalY,
+                startPositions: positions
+              });
+            }}
           >
-            <svg className="pointer-events-none absolute inset-0 z-0" width={BOARD_WIDTH} height={BOARD_HEIGHT}>
-              {connectors}
-            </svg>
-            {people.map((person) => {
-              const position = positions[person.id] ?? { x: 20, y: 20 };
-              const unselectedBubbleClass =
-                person.sex === "female"
-                  ? "border-pink-300 bg-pink-100 text-pink-900"
-                  : person.sex === "male"
-                    ? "border-sky-300 bg-sky-100 text-sky-900"
-                    : "border-teal-300 bg-teal-100 text-teal-900";
-              const selectedBubbleClass =
-                person.sex === "female"
-                  ? "border-pink-500 bg-pink-200 text-pink-950"
-                  : person.sex === "male"
-                    ? "border-sky-500 bg-sky-200 text-sky-950"
-                    : "border-slate-900 bg-slate-900 text-white";
+            <div
+              className="absolute left-0 top-0 origin-top-left"
+              style={{ width: BOARD_WIDTH, height: BOARD_HEIGHT, transform: `scale(${boardScale})` }}
+            >
+              <svg className="pointer-events-none absolute inset-0 z-0" width={BOARD_WIDTH} height={BOARD_HEIGHT}>
+                {connectors}
+              </svg>
+              {people.map((person) => {
+                const position = positions[person.id] ?? { x: 20, y: 20 };
+                const unselectedBubbleClass =
+                  person.sex === "female"
+                    ? "border-pink-300 bg-pink-100 text-pink-900"
+                    : person.sex === "male"
+                      ? "border-sky-300 bg-sky-100 text-sky-900"
+                      : "border-teal-300 bg-teal-100 text-teal-900";
+                const selectedBubbleClass =
+                  person.sex === "female"
+                    ? "border-pink-500 bg-pink-200 text-pink-950"
+                    : person.sex === "male"
+                      ? "border-sky-500 bg-sky-200 text-sky-950"
+                      : "border-slate-900 bg-slate-900 text-white";
+                return (
+                  <button
+                    key={person.id}
+                    type="button"
+                    onClick={() => onSelectPerson?.(person.id)}
+                    onPointerDown={(event) => {
+                      if (!canEdit || !viewportRef.current) {
+                        return;
+                      }
+
+                      event.stopPropagation();
+
+                      const bounds = viewportRef.current.getBoundingClientRect();
+                      const logicalX = (event.clientX - bounds.left + viewportRef.current.scrollLeft) / boardScale;
+                      const logicalY = (event.clientY - bounds.top + viewportRef.current.scrollTop) / boardScale;
+
+                      if (moveAllMode) {
+                        setDragState({
+                          mode: "all",
+                          anchorX: logicalX,
+                          anchorY: logicalY,
+                          startPositions: positions
+                        });
+                        return;
+                      }
+
+                      const offsetX = logicalX - position.x;
+                      const offsetY = logicalY - position.y;
+                      setDragState({ mode: "person", personId: person.id, offsetX, offsetY });
+                    }}
+                    className={`absolute z-10 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm ${
+                      selectedPersonId === person.id ? selectedBubbleClass : unselectedBubbleClass
+                    }`}
+                    style={{ left: position.x, top: position.y, cursor: canEdit ? (moveAllMode ? "move" : "grab") : "default" }}
+                  >
+                    {person.first_name} {person.last_name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <aside className="rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-slate-800">Relationship Details</h3>
+          <div className="space-y-4">
+            {unions.map((union) => {
+              const a = peopleMap.get(union.partner_a_person_id);
+              const b = union.partner_b_person_id ? peopleMap.get(union.partner_b_person_id) : null;
+              const kids = childrenLinks
+                .filter((link) => link.union_id === union.id)
+                .map((link) => peopleMap.get(link.child_person_id))
+                .filter(Boolean) as Person[];
+
               return (
-                <button
-                  key={person.id}
-                  type="button"
-                  onClick={() => onSelectPerson?.(person.id)}
-                  onPointerDown={(event) => {
-                    if (!canEdit || !viewportRef.current) {
-                      return;
-                    }
+                <div key={union.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="rounded-full bg-teal-100 px-3 py-1 font-medium text-teal-800">
+                      {a ? `${a.first_name} ${a.last_name}` : "Unknown Partner"}
+                    </span>
+                    <span className="text-slate-500">{union.union_type.toUpperCase()}</span>
+                    {b ? (
+                      <span className="rounded-full bg-cyan-100 px-3 py-1 font-medium text-cyan-800">
+                        {`${b.first_name} ${b.last_name}`}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">Single Parent</span>
+                    )}
+                  </div>
 
-                    event.stopPropagation();
-
-                    const bounds = viewportRef.current.getBoundingClientRect();
-                    const logicalX = (event.clientX - bounds.left + viewportRef.current.scrollLeft) / boardScale;
-                    const logicalY = (event.clientY - bounds.top + viewportRef.current.scrollTop) / boardScale;
-
-                    if (moveAllMode) {
-                      setDragState({
-                        mode: "all",
-                        anchorX: logicalX,
-                        anchorY: logicalY,
-                        startPositions: positions
-                      });
-                      return;
-                    }
-
-                    const offsetX = logicalX - position.x;
-                    const offsetY = logicalY - position.y;
-                    setDragState({ mode: "person", personId: person.id, offsetX, offsetY });
-                  }}
-                  className={`absolute z-10 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm ${
-                    selectedPersonId === person.id ? selectedBubbleClass : unselectedBubbleClass
-                  }`}
-                  style={{ left: position.x, top: position.y, cursor: canEdit ? (moveAllMode ? "move" : "grab") : "default" }}
-                >
-                  {person.first_name} {person.last_name}
-                </button>
+                  <div className="mt-3">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Children tied to this union</div>
+                    {kids.length === 0 ? (
+                      <p className="text-sm text-slate-500">No children linked to this union yet.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {kids.map((kid) => (
+                          <span key={kid.id} className="rounded-full bg-indigo-100 px-3 py-1 text-sm font-medium text-indigo-800">
+                            {kid.first_name} {kid.last_name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        {unions.map((union) => {
-          const a = peopleMap.get(union.partner_a_person_id);
-          const b = union.partner_b_person_id ? peopleMap.get(union.partner_b_person_id) : null;
-          const kids = childrenLinks
-            .filter((link) => link.union_id === union.id)
-            .map((link) => peopleMap.get(link.child_person_id))
-            .filter(Boolean) as Person[];
-
-          return (
-            <div key={union.id} className="rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm">
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="rounded-full bg-teal-100 px-3 py-1 font-medium text-teal-800">
-                  {a ? `${a.first_name} ${a.last_name}` : "Unknown Partner"}
-                </span>
-                <span className="text-slate-500">{union.union_type.toUpperCase()}</span>
-                {b ? (
-                  <span className="rounded-full bg-cyan-100 px-3 py-1 font-medium text-cyan-800">
-                    {`${b.first_name} ${b.last_name}`}
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">Single Parent</span>
-                )}
-              </div>
-
-              <div className="mt-3">
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Children tied to this union</div>
-                {kids.length === 0 ? (
-                  <p className="text-sm text-slate-500">No children linked to this union yet.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {kids.map((kid) => (
-                      <span key={kid.id} className="rounded-full bg-indigo-100 px-3 py-1 text-sm font-medium text-indigo-800">
-                        {kid.first_name} {kid.last_name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+        </aside>
       </div>
     </div>
   );
