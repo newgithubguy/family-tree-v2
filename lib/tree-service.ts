@@ -305,7 +305,7 @@ export function createUnion(input: {
   treeId: string;
   actorUserId: string;
   partnerAPersonId: string;
-  partnerBPersonId: string;
+  partnerBPersonId?: string | null;
   unionType: "married" | "unmarried" | "divorced";
 }) {
   const db = getDb();
@@ -314,7 +314,7 @@ export function createUnion(input: {
     id: randomUUID(),
     tree_id: input.treeId,
     partner_a_person_id: input.partnerAPersonId,
-    partner_b_person_id: input.partnerBPersonId,
+    partner_b_person_id: input.partnerBPersonId ?? null,
     union_type: input.unionType,
     start_date: null,
     end_date: null,
@@ -343,7 +343,7 @@ export function updateUnion(input: {
   treeId: string;
   actorUserId: string;
   partnerAPersonId: string;
-  partnerBPersonId: string;
+  partnerBPersonId?: string | null;
   unionType: "married" | "unmarried" | "divorced";
 }) {
   const db = getDb();
@@ -354,7 +354,7 @@ export function updateUnion(input: {
 
   const current = { ...union };
   union.partner_a_person_id = input.partnerAPersonId;
-  union.partner_b_person_id = input.partnerBPersonId;
+  union.partner_b_person_id = input.partnerBPersonId ?? null;
   union.union_type = input.unionType;
   union.updated_at = currentTimestamp();
 

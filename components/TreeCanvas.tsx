@@ -195,7 +195,9 @@ export function TreeCanvas({
 
       const parentIds = childToParents.get(link.child_person_id) ?? new Set<string>();
       parentIds.add(union.partner_a_person_id);
-      parentIds.add(union.partner_b_person_id);
+      if (union.partner_b_person_id) {
+        parentIds.add(union.partner_b_person_id);
+      }
       childToParents.set(link.child_person_id, parentIds);
     });
 
@@ -235,47 +237,49 @@ export function TreeCanvas({
 
     unions.forEach((union) => {
       const partnerA = centers[union.partner_a_person_id];
-      const partnerB = centers[union.partner_b_person_id];
-      if (!partnerA || !partnerB) {
+      const partnerB = union.partner_b_person_id ? centers[union.partner_b_person_id] : null;
+      if (!partnerA) {
         return;
       }
 
       const stroke = strokeColorForUnion(union.union_type);
       const childStroke = childStrokeColorForUnion(union.union_type);
       const midpoint = {
-        x: (partnerA.x + partnerB.x) / 2,
-        y: (partnerA.y + partnerB.y) / 2
+        x: partnerB ? (partnerA.x + partnerB.x) / 2 : partnerA.x,
+        y: partnerB ? (partnerA.y + partnerB.y) / 2 : partnerA.y
       };
 
       if (showPartnerConnections) {
-        if (connectionStyle === "straight") {
-          elements.push(
-            <line
-              key={`partner-${union.id}`}
-              x1={partnerA.x}
-              y1={partnerA.y}
-              x2={partnerB.x}
-              y2={partnerB.y}
-              stroke={stroke}
-              strokeWidth={3}
-              strokeDasharray={union.union_type === "unmarried" ? "6 6" : undefined}
-              opacity={0.8}
-            />
-          );
-        } else {
-          const controlX = midpoint.x;
-          const controlY = midpoint.y - 28;
-          elements.push(
-            <path
-              key={`partner-${union.id}`}
-              d={`M ${partnerA.x} ${partnerA.y} Q ${controlX} ${controlY} ${partnerB.x} ${partnerB.y}`}
-              fill="none"
-              stroke={stroke}
-              strokeWidth={3}
-              strokeDasharray={union.union_type === "unmarried" ? "6 6" : undefined}
-              opacity={0.8}
-            />
-          );
+        if (partnerB) {
+          if (connectionStyle === "straight") {
+            elements.push(
+              <line
+                key={`partner-${union.id}`}
+                x1={partnerA.x}
+                y1={partnerA.y}
+                x2={partnerB.x}
+                y2={partnerB.y}
+                stroke={stroke}
+                strokeWidth={3}
+                strokeDasharray={union.union_type === "unmarried" ? "6 6" : undefined}
+                opacity={0.8}
+              />
+            );
+          } else {
+            const controlX = midpoint.x;
+            const controlY = midpoint.y - 28;
+            elements.push(
+              <path
+                key={`partner-${union.id}`}
+                d={`M ${partnerA.x} ${partnerA.y} Q ${controlX} ${controlY} ${partnerB.x} ${partnerB.y}`}
+                fill="none"
+                stroke={stroke}
+                strokeWidth={3}
+                strokeDasharray={union.union_type === "unmarried" ? "6 6" : undefined}
+                opacity={0.8}
+              />
+            );
+          }
         }
 
         elements.push(
@@ -548,7 +552,7 @@ export function TreeCanvas({
       <div className="space-y-6">
         {unions.map((union) => {
           const a = peopleMap.get(union.partner_a_person_id);
-          const b = peopleMap.get(union.partner_b_person_id);
+          const b = union.partner_b_person_id ? peopleMap.get(union.partner_b_person_id) : null;
           const kids = childrenLinks
             .filter((link) => link.union_id === union.id)
             .map((link) => peopleMap.get(link.child_person_id))
@@ -561,9 +565,13 @@ export function TreeCanvas({
                   {a ? `${a.first_name} ${a.last_name}` : "Unknown Partner"}
                 </span>
                 <span className="text-slate-500">{union.union_type.toUpperCase()}</span>
-                <span className="rounded-full bg-cyan-100 px-3 py-1 font-medium text-cyan-800">
-                  {b ? `${b.first_name} ${b.last_name}` : "Unknown Partner"}
-                </span>
+                {b ? (
+                  <span className="rounded-full bg-cyan-100 px-3 py-1 font-medium text-cyan-800">
+                    {`${b.first_name} ${b.last_name}`}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">Single Parent</span>
+                )}
               </div>
 
               <div className="mt-3">

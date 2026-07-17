@@ -67,7 +67,11 @@ function relationshipText(snapshot: Record<string, unknown> | null, peopleNameMa
   const partnerAId = asText(snapshot.partner_a_person_id);
   const partnerBId = asText(snapshot.partner_b_person_id);
   const partnerA = partnerAId ? peopleNameMap[partnerAId] ?? partnerAId : "someone";
-  const partnerB = partnerBId ? peopleNameMap[partnerBId] ?? partnerBId : "someone";
+  if (!partnerBId) {
+    return `${partnerA} as a single parent`;
+  }
+
+  const partnerB = peopleNameMap[partnerBId] ?? partnerBId;
   return `${partnerA} and ${partnerB}`;
 }
 

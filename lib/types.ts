@@ -27,7 +27,7 @@ export interface UnionRecord {
   id: string;
   tree_id: string;
   partner_a_person_id: string;
-  partner_b_person_id: string;
+  partner_b_person_id: string | null;
   union_type: "married" | "unmarried" | "divorced";
   start_date: string | null;
   end_date: string | null;

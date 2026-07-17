@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 const updateSchema = z.object({
   treeId: z.string().min(1),
   partnerAPersonId: z.string().min(1),
-  partnerBPersonId: z.string().min(1),
+  partnerBPersonId: z.string().min(1).nullable().optional(),
   unionType: z.enum(["married", "unmarried", "divorced"])
 });
 
@@ -35,7 +35,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Editor role required" }, { status: 403 });
   }
 
-  if (parsed.data.partnerAPersonId === parsed.data.partnerBPersonId) {
+  if (parsed.data.partnerBPersonId && parsed.data.partnerAPersonId === parsed.data.partnerBPersonId) {
     return NextResponse.json({ error: "Union requires two distinct partners" }, { status: 400 });
   }
 
@@ -44,7 +44,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     treeId: parsed.data.treeId,
     actorUserId: user.id,
     partnerAPersonId: parsed.data.partnerAPersonId,
-    partnerBPersonId: parsed.data.partnerBPersonId,
+    partnerBPersonId: parsed.data.partnerBPersonId ?? null,
     unionType: parsed.data.unionType
   });
 

@@ -41,6 +41,7 @@ export function EditorPanel({
   const [unionMessage, setUnionMessage] = useState<string | null>(null);
   const [selectedChildLinkId, setSelectedChildLinkId] = useState("");
   const [connectionUnionId, setConnectionUnionId] = useState("");
+  const [singleParentId, setSingleParentId] = useState("");
   const [childLinkMessage, setChildLinkMessage] = useState<string | null>(null);
 
   const peopleNameMap = useMemo(() => {
@@ -79,13 +80,24 @@ export function EditorPanel({
   const parentUnionOptions = useMemo(
     () =>
       unions.filter(
-        (union) => union.partner_a_person_id !== selectedPersonId && union.partner_b_person_id !== selectedPersonId
+        (union) =>
+          union.partner_a_person_id !== selectedPersonId &&
+          (!union.partner_b_person_id || union.partner_b_person_id !== selectedPersonId)
       ),
     [selectedPersonId, unions]
   );
 
+  const parentPersonOptions = useMemo(
+    () => people.filter((person) => person.id !== selectedPersonId),
+    [people, selectedPersonId]
+  );
+
   function unionDisplayName(union: UnionRecord) {
     const partnerAName = peopleNameMap[union.partner_a_person_id] ?? "Unknown parent";
+    if (!union.partner_b_person_id) {
+      return `${partnerAName} (single parent)`;
+    }
+
     const partnerBName = peopleNameMap[union.partner_b_person_id] ?? "Unknown parent";
     return `${partnerAName} + ${partnerBName} (${union.union_type})`;
   }
@@ -109,6 +121,7 @@ export function EditorPanel({
       setUnionMessage(null);
       setSelectedChildLinkId("");
       setConnectionUnionId("");
+      setSingleParentId("");
       setChildLinkMessage(null);
       return;
     }
@@ -136,7 +149,7 @@ export function EditorPanel({
 
     const otherPartnerId =
       selectedUnion.partner_a_person_id === selectedPersonId
-        ? selectedUnion.partner_b_person_id
+        ? selectedUnion.partner_b_person_id ?? ""
         : selectedUnion.partner_a_person_id;
 
     setConnectionPartnerId(otherPartnerId);
@@ -147,6 +160,7 @@ export function EditorPanel({
   useEffect(() => {
     if (!selectedChildLinkId) {
       setConnectionUnionId("");
+      setSingleParentId("");
       return;
     }
 
@@ -156,9 +170,16 @@ export function EditorPanel({
       return;
     }
 
-    setConnectionUnionId(selectedChildLink.union_id);
+    const linkedUnion = unions.find((record) => record.id === selectedChildLink.union_id);
+    if (linkedUnion?.partner_b_person_id) {
+      setConnectionUnionId(selectedChildLink.union_id);
+      setSingleParentId("");
+    } else {
+      setConnectionUnionId("");
+      setSingleParentId(linkedUnion?.partner_a_person_id ?? "");
+    }
     setChildLinkMessage(null);
-  }, [childLinksForPerson, selectedChildLinkId]);
+  }, [childLinksForPerson, selectedChildLinkId, unions]);
 
   async function submitPerson() {
     if (!canEdit) {
@@ -284,7 +305,47 @@ export function EditorPanel({
   }
 
   async function submitChildLink() {
-    if (!canEdit || !selectedPersonId || !connectionUnionId) {
+    if (!canEdit || !selectedPersonId || (!connectionUnionId && !singleParentId)) {
+      return;
+    }
+
+    let resolvedUnionId = connectionUnionId;
+    if (!resolvedUnionId && singleParentId) {
+      const existingSingleParentUnion = unions.find(
+        (union) => union.partner_a_person_id === singleParentId && !union.partner_b_person_id
+      );
+
+      if (existingSingleParentUnion) {
+        resolvedUnionId = existingSingleParentUnion.id;
+      } else {
+        const unionResponse = await fetch("/api/tree/unions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            treeId,
+            partnerAPersonId: singleParentId,
+            partnerBPersonId: null,
+            unionType: "unmarried"
+          })
+        });
+
+        if (!unionResponse.ok) {
+          setChildLinkMessage("Failed to create single-parent record.");
+          return;
+        }
+
+        const unionPayload = (await unionResponse.json().catch(() => null)) as { union?: UnionRecord } | null;
+        if (!unionPayload?.union?.id) {
+          setChildLinkMessage("Failed to create single-parent record.");
+          return;
+        }
+
+        resolvedUnionId = unionPayload.union.id;
+      }
+    }
+
+    if (!resolvedUnionId) {
+      setChildLinkMessage("Select a parent union or a single parent.");
       return;
     }
 
@@ -293,7 +354,7 @@ export function EditorPanel({
       {
         method: selectedChildLinkId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ treeId, unionId: connectionUnionId, childPersonId: selectedPersonId })
+        body: JSON.stringify({ treeId, unionId: resolvedUnionId, childPersonId: selectedPersonId })
       }
     );
 
@@ -310,6 +371,9 @@ export function EditorPanel({
     if (nextLinkId) {
       setSelectedChildLinkId(nextLinkId);
     }
+
+    setConnectionUnionId(resolvedUnionId);
+    setSingleParentId("");
   }
 
   async function removeChildLink() {
@@ -489,7 +553,7 @@ export function EditorPanel({
           {selectedPersonId && (
             <section className="space-y-2 rounded-xl border border-slate-200 p-3">
               <h3 className="text-sm font-semibold text-slate-800">Edit Parent Link</h3>
-              <p className="text-xs text-slate-500">Use this when the selected person should belong to a different parent union.</p>
+              <p className="text-xs text-slate-500">Use a parent union or choose a single parent for this person.</p>
               <select
                 className="w-full rounded-md border px-3 py-2 text-sm"
                 value={selectedChildLinkId}
@@ -505,7 +569,12 @@ export function EditorPanel({
               <select
                 className="w-full rounded-md border px-3 py-2 text-sm"
                 value={connectionUnionId}
-                onChange={(event) => setConnectionUnionId(event.target.value)}
+                onChange={(event) => {
+                  setConnectionUnionId(event.target.value);
+                  if (event.target.value) {
+                    setSingleParentId("");
+                  }
+                }}
               >
                 <option value="">Select parent union</option>
                 {parentUnionOptions.map((union) => (
@@ -514,9 +583,26 @@ export function EditorPanel({
                   </option>
                 ))}
               </select>
+              <select
+                className="w-full rounded-md border px-3 py-2 text-sm"
+                value={singleParentId}
+                onChange={(event) => {
+                  setSingleParentId(event.target.value);
+                  if (event.target.value) {
+                    setConnectionUnionId("");
+                  }
+                }}
+              >
+                <option value="">Or select single parent</option>
+                {parentPersonOptions.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.first_name} {person.last_name}
+                  </option>
+                ))}
+              </select>
               {childLinkMessage && <p className="text-xs text-slate-600">{childLinkMessage}</p>}
               <button
-                disabled={!canEdit || !connectionUnionId}
+                disabled={!canEdit || (!connectionUnionId && !singleParentId)}
                 onClick={submitChildLink}
                 className="w-full rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >

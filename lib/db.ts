@@ -41,7 +41,7 @@ type UnionRow = {
   id: string;
   tree_id: string;
   partner_a_person_id: string;
-  partner_b_person_id: string;
+  partner_b_person_id: string | null;
   union_type: "married" | "unmarried" | "divorced";
   start_date: string | null;
   end_date: string | null;
@@ -275,6 +275,14 @@ function coerceDataShape(input: RelationalMockData | Record<string, unknown>): R
   data.users = data.users.map((user) => ({
     ...user,
     password: user.password || "password123"
+  }));
+
+  data.unions = data.unions.map((union) => ({
+    ...union,
+    partner_b_person_id:
+      typeof union.partner_b_person_id === "string" && union.partner_b_person_id.trim().length > 0
+        ? union.partner_b_person_id
+        : null
   }));
 
   for (const person of data.people) {
