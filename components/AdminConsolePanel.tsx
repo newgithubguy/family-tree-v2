@@ -34,6 +34,7 @@ export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefre
   const [selectedExistingUserId, setSelectedExistingUserId] = useState("");
   const [selectedExistingRole, setSelectedExistingRole] = useState<"viewer" | "editor">("viewer");
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [newOwnerUserId, setNewOwnerUserId] = useState("");
 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -49,6 +50,10 @@ export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefre
   const eligibleUsers = useMemo(() => {
     return users.filter((user) => !memberByUserId[user.id]);
   }, [memberByUserId, users]);
+
+  const ownerCandidates = useMemo(() => {
+    return members.filter((member) => member.user_id !== ownerUserId);
+  }, [members, ownerUserId]);
 
   async function createUser() {
     setBusy(true);
@@ -210,6 +215,39 @@ export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefre
     setBusy(false);
   }
 
+  async function transferOwnership() {
+    if (!newOwnerUserId) {
+      return;
+    }
+
+    const targetMember = members.find((member) => member.user_id === newOwnerUserId);
+    const targetName = targetMember ? targetMember.display_name : "selected member";
+    const confirmed = window.confirm(`Transfer tree ownership to ${targetName}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    const response = await fetch("/api/admin/owner", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ treeId, newOwnerUserId })
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      setError(payload?.error ?? "Failed to transfer ownership");
+      setBusy(false);
+      return;
+    }
+
+    setNewOwnerUserId("");
+    await onRefresh();
+    setBusy(false);
+  }
+
   return (
     <section className="panel mt-4 p-4">
       <div className="mb-4 flex items-center gap-2">
@@ -294,6 +332,33 @@ export function AdminConsolePanel({ treeId, users, members, ownerUserId, onRefre
               Add Member
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-slate-200 p-3">
+        <h3 className="mb-2 text-sm font-semibold text-slate-800">Transfer Ownership</h3>
+        <p className="mb-3 text-xs text-slate-500">Replace the current tree owner with another existing tree member.</p>
+        <div className="grid gap-2 md:grid-cols-[1fr_180px]">
+          <select
+            className="rounded-md border px-3 py-2 text-sm"
+            value={newOwnerUserId}
+            onChange={(event) => setNewOwnerUserId(event.target.value)}
+          >
+            <option value="">Select new owner</option>
+            {ownerCandidates.map((member) => (
+              <option key={member.user_id} value={member.user_id}>
+                {member.display_name} ({member.email})
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={busy || !newOwnerUserId}
+            className="rounded-md bg-indigo-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            onClick={transferOwnership}
+          >
+            Replace Owner
+          </button>
         </div>
       </div>
 

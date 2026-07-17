@@ -469,11 +469,27 @@ export function TreeCanvas({
         <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-slate-600">
           <span className="inline-flex items-center gap-2">
             <span className="inline-block w-8 border-t-2 border-teal-700" />
-            Partner connection
+            Married union
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block w-8 border-t-2 border-sky-700 border-dashed" />
+            Unmarried union
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block w-8 border-t-2 border-amber-700" />
+            Divorced union
           </span>
           <span className="inline-flex items-center gap-2">
             <span className="inline-block w-8 border-t-2 border-violet-600" />
-            Parent-child connection
+            Child link (married)
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block w-8 border-t-2 border-blue-600" />
+            Child link (unmarried)
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block w-8 border-t-2 border-red-600" />
+            Child link (divorced)
           </span>
           <span className="inline-flex items-center gap-2">
             <span className="inline-block w-8 border-t-2 border-emerald-600" />
